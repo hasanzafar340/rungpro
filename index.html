@@ -75,6 +75,7 @@
             mix-blend-mode: overlay;
         }
 
+        /* Side Panel */
         #side-panel {
             width: 260px;
             min-width: 200px;
@@ -176,6 +177,7 @@
             100% { opacity: 1; transform: translateX(0); }
         }
 
+        /* Top Bar */
         #top-bar {
             display: flex;
             justify-content: space-between;
@@ -610,6 +612,31 @@
             animation: pulse-gold 1.5s ease-in-out infinite;
         }
 
+        .turn-arrow {
+            display: inline-block;
+            animation: arrowPulse 0.8s ease-in-out infinite;
+        }
+
+        @keyframes arrowPulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.2); }
+        }
+
+        .turn-order-display {
+            font-size: 0.7rem;
+            color: #b8a27b;
+            text-align: center;
+            padding: 4px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 20px;
+            margin-top: 2px;
+        }
+
+        .turn-order-display .highlight-turn {
+            color: #f5e9b0;
+            font-weight: 700;
+        }
+
         @media (max-width: 900px) {
             #app-wrapper {
                 flex-direction: column;
@@ -706,14 +733,16 @@
                     <div id="turn-indicator">⏳ waiting</div>
                 </div>
 
+                <!-- Usman (C1) - TOP - Player 1 -->
                 <div class="player-zone" id="zone-top">
                     <div class="player-label partner" id="label-1">🤖 Usman (C1) <span class="partner-badge">🤝 Partner</span> <span class="trick-count-badge" id="badge-1">0</span></div>
                     <div class="cards-container" id="computer1-cards"></div>
                 </div>
 
+                <!-- Middle: Arslan (C2) - LEFT - Player 2 & Zara (C3) - RIGHT - Player 3 -->
                 <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; flex-wrap:wrap;">
                     <div class="player-zone" style="flex:1; min-width:70px;">
-                        <div class="player-label opponent" id="label-2">🤖 Ahsan (C2) <span class="opponent-badge">⚔️</span> <span class="trick-count-badge" id="badge-2">0</span></div>
+                        <div class="player-label opponent" id="label-2">🤖 Arslan (C2) <span class="opponent-badge">⚔️</span> <span class="trick-count-badge" id="badge-2">0</span></div>
                         <div class="cards-container" id="computer2-cards"></div>
                     </div>
                     <div id="center-area" style="flex:2; min-width:160px;">
@@ -728,14 +757,18 @@
                     </div>
                 </div>
 
+                <!-- You (Human) - BOTTOM - Player 0 -->
                 <div class="player-zone human" id="zone-human">
                     <div class="player-label partner" id="label-0">🧑 You <span class="partner-badge">🤝 Partner: Usman</span> <span class="trick-count-badge" id="badge-0">0</span></div>
                     <div class="cards-container" id="human-cards"></div>
                 </div>
-                <div style="font-size:0.65rem; color:#b8a27b; text-align:center; margin-top:2px; opacity:0.6;">Hover over cards to zoom · Click to play</div>
+                <div class="turn-order-display" id="turn-order-display">
+                    🔄 Anticlockwise: <span class="highlight-turn" id="current-turn-display">You</span> → Zara → Usman → Arslan → You
+                </div>
             </div>
         </div>
 
+        <!-- Side Panel -->
         <div id="side-panel">
             <h3>📋 GAME LOG</h3>
             <div id="team-scores">
@@ -744,7 +777,7 @@
                     <span class="team-score" id="team-partner-score">0</span>
                 </div>
                 <div class="team-row">
-                    <span class="team-label team-opponent">⚔️ Opponents (Ahsan + Zara)</span>
+                    <span class="team-label team-opponent">⚔️ Opponents (Arslan + Zara)</span>
                     <span class="team-score" id="team-opponent-score">0</span>
                 </div>
             </div>
@@ -757,9 +790,26 @@
             const SUITS = ['♠', '♥', '♦', '♣'];
             const RANKS = ['A', 'K', 'Q', 'J', '10', '9', '8', '7', '6', '5', '4', '3', '2'];
             const RANK_VALUES = { A: 14, K: 13, Q: 12, J: 11, 10: 10, 9: 9, 8: 8, 7: 7, 6: 6, 5: 5, 4: 4, 3: 3, 2: 2 };
-            const PLAYER_NAMES = ['You', 'Usman', 'Ahsan', 'Zara'];
+            const PLAYER_NAMES = ['You', 'Usman', 'Arslan', 'Zara'];
             const PLAYER_ICONS = ['🧑', '🤖', '🤖', '🤖'];
             const PARTNER_MAP = { 0: 1, 1: 0, 2: 3, 3: 2 };
+
+            // ANTICLOCKWISE ORDER: 0(You) -> 3(Zara) -> 1(Usman) -> 2(Arslan) -> 0
+            // Next player in anticlockwise direction
+            function getNextPlayer(playerIdx) {
+                // Order: 0 -> 3 -> 1 -> 2 -> 0
+                const order = [0, 3, 1, 2];
+                const currentIndex = order.indexOf(playerIdx);
+                return order[(currentIndex + 1) % 4];
+            }
+
+            // Get the display order for the turn indicator
+            function getTurnOrderDisplay() {
+                return ['You', 'Zara', 'Usman', 'Arslan'];
+            }
+
+            // PHASE DISTRIBUTION: 5 + 2 + 2 + 2 + 2 = 13
+            const PHASE_SIZES = [5, 2, 2, 2, 2];
 
             let state = {};
             let trickCards = [];
@@ -768,7 +818,7 @@
             let trickWinner = -1;
             let phaseTricks = 0;
             let totalTricks = 0;
-            let currentPhase = 1;
+            let currentPhase = 0; // 0-indexed
             let phaseStart = 0;
             let roundOver = false;
             let turnLock = false;
@@ -793,6 +843,8 @@
             const rungInstruction = document.getElementById('rung-instruction');
             const teamPartnerScore = document.getElementById('team-partner-score');
             const teamOpponentScore = document.getElementById('team-opponent-score');
+            const currentTurnDisplay = document.getElementById('current-turn-display');
+            const turnOrderDisplay = document.getElementById('turn-order-display');
             const badges = [
                 document.getElementById('badge-0'),
                 document.getElementById('badge-1'),
@@ -871,26 +923,9 @@
                 return bestIdx;
             }
 
-            function getPhaseSizes() {
-                const remaining = 13 - totalTricks;
-                if (remaining <= 0) return [];
-                if (currentPhase === 1) {
-                    let size = Math.min(13, Math.max(5, Math.floor(Math.random() * 9) + 5));
-                    if (remaining - size > 0 && remaining - size < 2) size = remaining - 2;
-                    if (size < 5) size = 5;
-                    if (size > remaining) size = remaining;
-                    return [size];
-                } else {
-                    let size = Math.min(remaining, Math.floor(Math.random() * 7) + 2);
-                    if (remaining - size > 0 && remaining - size < 2) size = remaining - 2;
-                    if (size < 2) size = 2;
-                    if (size > remaining) size = remaining;
-                    return [size];
-                }
-            }
-
-            function getNextPlayer(playerIdx) {
-                return (playerIdx - 1 + 4) % 4;
+            function getPhaseSize() {
+                if (currentPhase >= PHASE_SIZES.length) return 0;
+                return PHASE_SIZES[currentPhase];
             }
 
             function updateBadges() {
@@ -910,7 +945,27 @@
                 });
             }
 
-            // ------- ADVANCED AI WITH STRATEGIC RULES ----------
+            function updateTurnDisplay() {
+                const order = getTurnOrderDisplay();
+                let html = '🔄 Anticlockwise: ';
+                for (let i = 0; i < order.length; i++) {
+                    const name = order[i];
+                    const isCurrent = (i === 0 && state.currentPlayer === 0) || 
+                                     (i === 1 && state.currentPlayer === 3) ||
+                                     (i === 2 && state.currentPlayer === 1) ||
+                                     (i === 3 && state.currentPlayer === 2);
+                    if (isCurrent) {
+                        html += `<span class="highlight-turn">${name}</span>`;
+                    } else {
+                        html += name;
+                    }
+                    if (i < order.length - 1) html += ' → ';
+                }
+                html += ' → You';
+                turnOrderDisplay.innerHTML = html;
+            }
+
+            // ------- ADVANCED AI ----------
             function aiChooseCard(playerIdx, hand) {
                 const valid = getValidMoves(playerIdx, hand);
                 if (valid.length === 0) return 0;
@@ -923,7 +978,6 @@
                 const hasAceOfTrump = hand.some(c => c.suit === trump && c.rank === 'A');
                 const currentTrickNumber = totalTricks + 1;
                 
-                // Check if partner has played and is winning
                 let partnerIsWinning = false;
                 let partnerCard = null;
                 if (trickCards.length > 0 && !isLead) {
@@ -936,100 +990,79 @@
                     }
                 }
 
-                // ===== RULE 1: If strong in Rung (have Ace of Rung), DON'T play Rung card =====
+                // Rule 1: Strong in Rung - don't play Rung
                 if (hasAceOfTrump && trumpCount >= 4) {
-                    // We are strong in Rung - don't play Rung unless absolutely necessary
-                    // Try to play other suits first
                     const nonTrumpCards = hand.filter(c => c.suit !== trump);
                     if (nonTrumpCards.length > 0) {
                         const validNonTrump = valid.filter(idx => hand[idx].suit !== trump);
                         if (validNonTrump.length > 0) {
-                            // Play highest non-trump card
                             let bestIdx = validNonTrump[0];
                             for (let idx of validNonTrump) {
                                 if (hand[idx].value > hand[bestIdx].value) bestIdx = idx;
                             }
-                            addStep(`🤖 ${PLAYER_NAMES[playerIdx]} (strong in Rung) plays non-Rung card`, false);
                             return bestIdx;
                         }
                     }
                 }
 
-                // ===== RULE 2: If weak in Rung (1-3 cards), signal partner by playing smallest Rung =====
+                // Rule 2: Weak in Rung (1-3 cards) - signal partner
                 if (trumpCount >= 1 && trumpCount <= 3 && isLead) {
-                    // Weak in Rung - signal partner by playing smallest Rung card
                     const trumpCards = hand.filter(c => c.suit === trump);
                     if (trumpCards.length > 0) {
                         const smallestTrump = trumpCards.reduce((a, b) => a.value < b.value ? a : b);
                         const idx = hand.indexOf(smallestTrump);
                         if (valid.includes(idx)) {
-                            addStep(`📢 ${PLAYER_NAMES[playerIdx]} signals WEAK in Rung (${trumpCount} cards) - plays smallest Rung`, true);
+                            addStep(`📢 ${PLAYER_NAMES[playerIdx]} signals WEAK in Rung (${trumpCount} cards)`, true);
                             return idx;
                         }
                     }
                 }
 
-                // ===== RULE 3: If partner is weak (signaled by small Rung), partner plays strong to win =====
-                // Check if partner played a small Rung card (signaling weakness)
+                // Rule 3: Partner signaled weakness - play strong
                 let partnerSignaledWeak = false;
                 if (partnerCard && partnerCard.card.suit === trump && partnerCard.card.value <= 10) {
                     partnerSignaledWeak = true;
                 }
 
                 if (partnerSignaledWeak && hasAceOfTrump) {
-                    // Partner is weak, we are strong - play our best Rung to win
                     const trumpCards = hand.filter(c => c.suit === trump);
-                    if (trumpCards.length > 0 && (isLead || trickLeadSuit === null || !hand.some(c => c.suit === leadSuit))) {
+                    if (trumpCards.length > 0) {
                         const bestTrump = trumpCards.reduce((a, b) => a.value > b.value ? a : b);
                         const idx = hand.indexOf(bestTrump);
                         if (valid.includes(idx)) {
-                            addStep(`🤝 ${PLAYER_NAMES[playerIdx]} plays strong Rung to help weak partner!`, true);
+                            addStep(`🤝 ${PLAYER_NAMES[playerIdx]} plays strong Rung to help partner!`, true);
                             return idx;
                         }
                     }
                 }
 
-                // ===== RULE 4: Don't try to win first 2-3 tricks, discard weak cards =====
+                // Rule 4: Don't try to win first 2-3 tricks
                 if (currentTrickNumber <= 3) {
-                    // First 3 tricks - discard weak cards, don't try to win
-                    const hasTrumpInHand = hand.some(c => c.suit === trump);
-                    
-                    // If we have to follow suit, play lowest card of that suit
                     if (trickLeadSuit !== null) {
                         const hasLeadSuit = hand.some(c => c.suit === leadSuit);
                         if (hasLeadSuit) {
                             const suitCards = hand.filter(c => c.suit === leadSuit);
                             const lowest = suitCards.reduce((a, b) => a.value < b.value ? a : b);
                             const idx = hand.indexOf(lowest);
-                            if (valid.includes(idx)) {
-                                addStep(`🔄 ${PLAYER_NAMES[playerIdx]} discards weak card (early game)`, false);
-                                return idx;
-                            }
+                            if (valid.includes(idx)) return idx;
                         }
                     }
-                    
-                    // If leading, play lowest card overall
                     if (isLead || trickLeadSuit === null) {
                         let lowestIdx = valid[0];
                         for (let idx of valid) {
                             if (hand[idx].value < hand[lowestIdx].value) lowestIdx = idx;
                         }
-                        addStep(`🔄 ${PLAYER_NAMES[playerIdx]} plays low card (early game)`, false);
                         return lowestIdx;
                     }
                 }
 
-                // ===== Standard strategic play for later tricks =====
-                // If leading, play strategically
+                // Standard play for later tricks
                 if (isLead || trickLeadSuit === null) {
-                    // Try to play high cards to win
                     const highCards = hand.filter(c => c.value >= 12);
                     if (highCards.length > 0 && currentTrickNumber > 3) {
                         let idx = hand.indexOf(highCards.reduce((a, b) => a.value > b.value ? a : b));
                         if (valid.includes(idx)) return idx;
                     }
-                    
-                    // Play highest card
                     let maxIdx = 0;
                     for (let i = 1; i < hand.length; i++)
                         if (hand[i].value > hand[maxIdx].value) maxIdx = i;
@@ -1037,11 +1070,9 @@
                     return valid[0];
                 }
 
-                // Follow suit - try to win if it's late game
                 const hasSuit = hand.some(c => c.suit === leadSuit);
                 if (hasSuit) {
                     if (currentTrickNumber > 3) {
-                        // Try to win
                         let best = -1, bestVal = -1;
                         for (let idx of valid) {
                             if (hand[idx].suit === leadSuit && hand[idx].value > bestVal) {
@@ -1058,28 +1089,23 @@
                             }
                         }
                     }
-                    // Play lowest card of lead suit
                     const suitCards = hand.filter(c => c.suit === leadSuit);
                     let lowIdx = hand.indexOf(suitCards.reduce((a, b) => a.value < b.value ? a : b));
                     if (valid.includes(lowIdx)) return lowIdx;
                     return valid[0];
                 }
 
-                // No lead suit - play trump strategically
                 const trumpCards = hand.filter(c => c.suit === trump);
                 if (trumpCards.length > 0) {
                     if (currentTrickNumber > 3) {
-                        // Try to win with highest trump
                         let idx = hand.indexOf(trumpCards.reduce((a, b) => a.value > b.value ? a : b));
                         if (valid.includes(idx)) return idx;
                     } else {
-                        // Early game - play low trump
                         let idx = hand.indexOf(trumpCards.reduce((a, b) => a.value < b.value ? a : b));
                         if (valid.includes(idx)) return idx;
                     }
                 }
 
-                // Play lowest card
                 let lowIdx = valid[0];
                 for (let idx of valid)
                     if (hand[idx].value < hand[lowIdx].value) lowIdx = idx;
@@ -1169,7 +1195,6 @@
                 for (let c of hand) {
                     suitCounts[c.suit] = (suitCounts[c.suit] || 0) + 1;
                 }
-                // Choose suit with most high cards
                 let bestSuit = '♠';
                 let bestScore = -1;
                 for (let s of SUITS) {
@@ -1236,9 +1261,9 @@
             }
 
             function startPhase() {
-                const sizes = getPhaseSizes();
-                if (sizes.length === 0) { endRound(); return; }
-                phaseTricks = sizes[0];
+                const phaseSize = getPhaseSize();
+                if (phaseSize === 0 || totalTricks >= 13) { endRound(); return; }
+                phaseTricks = phaseSize;
                 phaseStart = totalTricks;
                 if (trickWinner !== -1) state.currentPlayer = trickWinner;
                 else state.currentPlayer = rungDeclarer;
@@ -1246,8 +1271,9 @@
                 trickLeadSuit = null;
                 trickCards = [];
                 trickWinner = -1;
-                addStep(`🔄 Phase ${currentPhase} started (${phaseTricks} tricks in this phase)`);
+                addStep(`🔄 Phase ${currentPhase+1} started (${phaseTricks} tricks in this phase)`);
                 renderAll();
+                updateTurnDisplay();
                 if (state.currentPlayer !== 0) {
                     turnIndicator.textContent = '🤖 thinking...';
                     setTimeout(() => aiTurn(), 800);
@@ -1279,13 +1305,14 @@
                     if (doneInPhase >= phaseTricks || totalTricks >= 13) {
                         if (totalTricks >= 13) { endRound(); return; }
                         currentPhase++;
-                        messageEl.innerHTML = `🔄 <span class="step-highlight">Phase ${currentPhase}</span> starting...`;
-                        addStep(`🔄 Phase ${currentPhase} starting...`, true);
+                        messageEl.innerHTML = `🔄 <span class="step-highlight">Phase ${currentPhase+1}</span> starting...`;
+                        addStep(`🔄 Phase ${currentPhase+1} starting...`, true);
                         startPhase();
                     } else {
                         state.currentPlayer = trickWinner;
                         trickLeadPlayer = trickWinner;
                         renderAll();
+                        updateTurnDisplay();
                         if (state.currentPlayer !== 0) {
                             turnIndicator.textContent = '🤖 thinking...';
                             setTimeout(() => aiTurn(), 800);
@@ -1323,6 +1350,7 @@
                 messageEl.innerHTML = msg;
                 addStep(`🃏 ${PLAYER_NAMES[playerIdx]} played ${card.rank}${card.suit}`);
                 renderAll();
+                updateTurnDisplay();
 
                 if (trickCards.length === 4) {
                     setTimeout(() => completeTrick(), 600);
@@ -1339,6 +1367,7 @@
                         turnIndicator.textContent = 'YOUR TURN';
                     }
                     renderAll();
+                    updateTurnDisplay();
                 }, 600);
             }
 
@@ -1357,7 +1386,7 @@
                 isAnimating = false;
                 const partnerTotal = trickCounts[0] + trickCounts[1];
                 const opponentTotal = trickCounts[2] + trickCounts[3];
-                const winner = partnerTotal > opponentTotal ? 'Your Team (You + Usman)' : 'Opponents (Ahsan + Zara)';
+                const winner = partnerTotal > opponentTotal ? 'Your Team (You + Usman)' : 'Opponents (Arslan + Zara)';
                 messageEl.innerHTML = `🏁 <span class="step-highlight">ROUND OVER!</span> ${winner} wins! (${partnerTotal} vs ${opponentTotal})`;
                 addStep(`🏁 Round over! ${winner} wins! (${partnerTotal} vs ${opponentTotal})`, true);
                 turnIndicator.textContent = 'ROUND END';
@@ -1389,7 +1418,7 @@
                             <span>${partnerTotal}</span>
                         </div>
                         <div class="result-row">
-                            <span>⚔️ Opponents (Ahsan + Zara) ${opponentTotal > partnerTotal ? '👑' : ''}</span>
+                            <span>⚔️ Opponents (Arslan + Zara) ${opponentTotal > partnerTotal ? '👑' : ''}</span>
                             <span>${opponentTotal}</span>
                         </div>
                         <div class="result-row" style="border-top:2px solid #3a5a3a; margin-top:8px; padding-top:8px; font-weight:700;">
@@ -1476,9 +1505,11 @@
                     trickDisplay.appendChild(wrapper);
                 });
 
-                phaseInfo.textContent = `Phase ${currentPhase} · Trick ${totalTricks}/13`;
+                const phaseDisplay = currentPhase + 1;
+                phaseInfo.textContent = `Phase ${phaseDisplay} · Trick ${totalTricks}/13`;
                 if (roundOver) phaseInfo.textContent = `🏁 Round over · ${totalTricks}/13`;
                 updateBadges();
+                updateTurnDisplay();
             }
 
             function startNewRound() {
@@ -1487,7 +1518,7 @@
                     players: [
                         { name: 'You', hand: [] },
                         { name: 'Usman', hand: [] },
-                        { name: 'Ahsan', hand: [] },
+                        { name: 'Arslan', hand: [] },
                         { name: 'Zara', hand: [] }
                     ],
                     deck: deck,
@@ -1497,7 +1528,7 @@
 
                 trickCounts = [0, 0, 0, 0];
                 totalTricks = 0;
-                currentPhase = 1;
+                currentPhase = 0;
                 phaseStart = 0;
                 roundOver = false;
                 isAnimating = false;
@@ -1516,7 +1547,9 @@
                 stepCounter = 0;
                 addStep('🔄 New round starting...', true);
                 addStep('🤝 Your partner is Usman (C1 - opposite you)', true);
-                addStep('⚔️ Opponents: Ahsan (C2) and Zara (C3)', true);
+                addStep('⚔️ Opponents: Arslan (C2) and Zara (C3)', true);
+                addStep('🔄 Turn order (anticlockwise): You → Zara → Usman → Arslan', true);
+                addStep('📊 Phase distribution: 5 + 2 + 2 + 2 + 2 = 13 tricks', true);
 
                 turnLock = true;
                 messageEl.innerHTML = '🃏 <span class="step-highlight">STEP 1:</span> Shuffling deck...';
@@ -1528,7 +1561,7 @@
                     addStep('🎯 Dealing one card to each player...');
                     renderAll();
 
-                    const cardOrder = [0, 3, 2, 1];
+                    const cardOrder = [0, 3, 1, 2]; // Anticlockwise: You -> Zara -> Usman -> Arslan
                     const oneCardEach = [];
                     for (let i = 0; i < 4; i++) {
                         const card = deck.pop();
