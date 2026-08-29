@@ -101,6 +101,33 @@
             flex-shrink: 0;
         }
 
+        #team-scores {
+            background: #0a1a0a80;
+            border-radius: 12px;
+            padding: 8px 12px;
+            margin-bottom: 10px;
+            border: 1px solid #3a5a3a;
+            flex-shrink: 0;
+        }
+
+        #team-scores .team-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            color: #d4d0c0;
+            padding: 2px 0;
+        }
+
+        #team-scores .team-row .team-label {
+            font-weight: 600;
+        }
+        #team-scores .team-row .team-score {
+            font-weight: 700;
+            color: #f5e9b0;
+        }
+        .team-partner { color: #7ddf7d; }
+        .team-opponent { color: #ff7d7d; }
+
         #step-log {
             flex: 1;
             overflow-y: auto;
@@ -245,6 +272,23 @@
             gap: 8px;
         }
 
+        .player-label.partner {
+            border-color: #7ddf7d;
+            background: #1a3a1acc;
+        }
+        .player-label.partner .partner-badge {
+            color: #7ddf7d;
+            font-size: 0.6rem;
+        }
+        .player-label.opponent {
+            border-color: #ff7d7d;
+            background: #3a1a1acc;
+        }
+        .player-label.opponent .opponent-badge {
+            color: #ff7d7d;
+            font-size: 0.6rem;
+        }
+
         .trick-count-badge {
             background: #f5e9b0;
             color: #1a2a1a;
@@ -369,7 +413,6 @@
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
         }
 
-        /* Rung selectable cards */
         .card.rung-selectable {
             cursor: pointer;
             border: 3px solid #f5e9b0;
@@ -529,6 +572,20 @@
         .result-row:last-child {
             border-bottom: none;
         }
+        .result-row .team-tag {
+            font-size: 0.7rem;
+            padding: 1px 8px;
+            border-radius: 12px;
+            margin-left: 6px;
+        }
+        .result-row .team-tag.partner-tag {
+            background: #2a5a2a;
+            color: #7ddf7d;
+        }
+        .result-row .team-tag.opponent-tag {
+            background: #5a2a2a;
+            color: #ff7d7d;
+        }
         .result-close-btn {
             display: block;
             margin: 20px auto 0;
@@ -555,7 +612,6 @@
             font-weight: 700;
         }
 
-        /* Rung selection message */
         #rung-instruction {
             display: none;
             background: rgba(0, 0, 0, 0.7);
@@ -666,16 +722,16 @@
                     <div id="turn-indicator">⏳ waiting</div>
                 </div>
 
-                <!-- computer 1 (top) - player index 1 -->
+                <!-- computer 1 (top) - player index 1 (PARTNER - opposite to You) -->
                 <div class="player-zone" id="zone-top">
-                    <div class="player-label" id="label-1">🤖 Usman (C1) <span class="trick-count-badge" id="badge-1">0</span></div>
+                    <div class="player-label partner" id="label-1">🤖 Usman (C1) <span class="partner-badge">🤝 Partner</span> <span class="trick-count-badge" id="badge-1">0</span></div>
                     <div class="cards-container" id="computer1-cards"></div>
                 </div>
 
                 <!-- middle: computer2 (left) & computer3 (right) + center -->
                 <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; flex-wrap:wrap;">
                     <div class="player-zone" style="flex:1; min-width:70px;">
-                        <div class="player-label" id="label-2">🤖 Hassan (C2) <span class="trick-count-badge" id="badge-2">0</span></div>
+                        <div class="player-label opponent" id="label-2">🤖 Hassan (C2) <span class="opponent-badge">⚔️</span> <span class="trick-count-badge" id="badge-2">0</span></div>
                         <div class="cards-container" id="computer2-cards"></div>
                     </div>
                     <div id="center-area" style="flex:2; min-width:160px;">
@@ -685,14 +741,14 @@
                         <button id="action-btn" style="display:none;">🔄 New Round</button>
                     </div>
                     <div class="player-zone" style="flex:1; min-width:70px;">
-                        <div class="player-label" id="label-3">🤖 Zara (C3) <span class="trick-count-badge" id="badge-3">0</span></div>
+                        <div class="player-label opponent" id="label-3">🤖 Zara (C3) <span class="opponent-badge">⚔️</span> <span class="trick-count-badge" id="badge-3">0</span></div>
                         <div class="cards-container" id="computer3-cards"></div>
                     </div>
                 </div>
 
                 <!-- human zone (bottom) - player index 0 -->
                 <div class="player-zone human" id="zone-human">
-                    <div class="player-label" id="label-0">🧑 You <span class="trick-count-badge" id="badge-0">0</span></div>
+                    <div class="player-label partner" id="label-0">🧑 You <span class="partner-badge">🤝 Partner: Usman</span> <span class="trick-count-badge" id="badge-0">0</span></div>
                     <div class="cards-container" id="human-cards"></div>
                 </div>
                 <div style="font-size:0.65rem; color:#b8a27b; text-align:center; margin-top:2px; opacity:0.6;">Hover over cards to zoom · Click to play</div>
@@ -702,6 +758,16 @@
         <!-- Side Panel -->
         <div id="side-panel">
             <h3>📋 GAME LOG</h3>
+            <div id="team-scores">
+                <div class="team-row">
+                    <span class="team-label team-partner">🤝 Your Team (You + Usman)</span>
+                    <span class="team-score" id="team-partner-score">0</span>
+                </div>
+                <div class="team-row">
+                    <span class="team-label team-opponent">⚔️ Opponents (Hassan + Zara)</span>
+                    <span class="team-score" id="team-opponent-score">0</span>
+                </div>
+            </div>
             <div id="step-log"></div>
         </div>
     </div>
@@ -735,6 +801,13 @@
             let waitingForRungDeclaration = false;
             let dealingComplete = false;
 
+            // Partner setup: You (0) partner with Usman (1) - opposite sides
+            // Opponents: Hassan (2) and Zara (3) are partners
+            const PARTNER_MAP = { 0: 1, 1: 0, 2: 3, 3: 2 };
+            const TEAM_NAMES = ['Your Team (You + Usman)', 'Opponents (Hassan + Zara)'];
+            const TEAM_PARTNER = 0;
+            const TEAM_OPPONENT = 1;
+
             // DOM refs
             const humanCardsEl = document.getElementById('human-cards');
             const c1cards = document.getElementById('computer1-cards');
@@ -748,12 +821,22 @@
             const actionBtn = document.getElementById('action-btn');
             const stepLog = document.getElementById('step-log');
             const rungInstruction = document.getElementById('rung-instruction');
+            const teamPartnerScore = document.getElementById('team-partner-score');
+            const teamOpponentScore = document.getElementById('team-opponent-score');
             const badges = [
                 document.getElementById('badge-0'),
                 document.getElementById('badge-1'),
                 document.getElementById('badge-2'),
                 document.getElementById('badge-3')
             ];
+
+            // ------- Team Score Update ----------
+            function updateTeamScores() {
+                const partnerTotal = trickCounts[0] + trickCounts[1];
+                const opponentTotal = trickCounts[2] + trickCounts[3];
+                teamPartnerScore.textContent = partnerTotal;
+                teamOpponentScore.textContent = opponentTotal;
+            }
 
             // ------- Step Logger ----------
             function addStep(message, isHighlight = false) {
@@ -848,6 +931,7 @@
                 for (let i = 0; i < 4; i++) {
                     badges[i].textContent = trickCounts[i];
                 }
+                updateTeamScores();
             }
 
             // Sort cards by suit (Spades, Hearts, Diamonds, Clubs) then by rank
@@ -857,7 +941,7 @@
                     if (suitOrder[a.suit] !== suitOrder[b.suit]) {
                         return suitOrder[a.suit] - suitOrder[b.suit];
                     }
-                    return b.value - a.value; // High to low within suit
+                    return b.value - a.value;
                 });
             }
 
@@ -904,11 +988,9 @@
                 rungInstruction.style.display = 'block';
                 messageEl.innerHTML = '🎯 <span class="step-highlight">Click a card from your hand</span> to declare it as Rung (Trump)!';
                 turnIndicator.textContent = 'CHOOSE RUNG';
-                
-                // Mark all cards in hand as selectable
+
                 renderAll();
-                
-                // Add rung-selectable class to all human cards
+
                 document.querySelectorAll('#human-cards .card').forEach(card => {
                     card.classList.add('rung-selectable');
                     card.onclick = function(e) {
@@ -928,22 +1010,20 @@
                 if (!waitingForRungDeclaration) return;
                 waitingForRungDeclaration = false;
                 rungInstruction.style.display = 'none';
-                
+
                 state.rungSuit = suit;
                 updateRungDisplay();
-                
+
                 messageEl.innerHTML = `📢 <span class="step-highlight">You declared ${suit}</span> as Rung (Trump) using ${cardName}!`;
                 addStep(`📢 You declared ${suit} as Rung using ${cardName}!`, true);
-                
-                // Remove rung-selectable class
+
                 document.querySelectorAll('#human-cards .card').forEach(card => {
                     card.classList.remove('rung-selectable');
                     card.onclick = null;
                 });
-                
+
                 renderAll();
 
-                // Continue with the game - deal remaining cards
                 setTimeout(() => {
                     messageEl.innerHTML = '📤 <span class="step-highlight">STEP 5:</span> Dealing 4 more cards to each player...';
                     addStep('📤 Dealing 4 more cards to each player...');
@@ -967,7 +1047,6 @@
                             }
                         }
 
-                        // Sort human's hand by suit
                         state.players[0].hand = sortCardsBySuit(state.players[0].hand);
 
                         gamePhase = 'play';
@@ -991,13 +1070,12 @@
                 }, 1200);
             }
 
-            // AI declares Rung automatically
             function aiDeclareRung() {
                 const suits = ['♠', '♥', '♦', '♣'];
                 const suit = suits[Math.floor(Math.random() * 4)];
                 state.rungSuit = suit;
                 updateRungDisplay();
-                
+
                 messageEl.innerHTML = `📢 <span class="step-highlight">${PLAYER_NAMES[rungDeclarer]}</span> declares ${suit} as Rung (Trump)!`;
                 addStep(`📢 ${PLAYER_NAMES[rungDeclarer]} declares ${suit} as Rung!`, true);
                 renderAll();
@@ -1083,16 +1161,16 @@
                 stepLog.innerHTML = '';
                 stepCounter = 0;
                 addStep('🔄 New round starting...', true);
+                addStep('🤝 Your partner is Usman (C1 - opposite you)', true);
+                addStep('⚔️ Opponents: Hassan (C2) and Zara (C3)', true);
 
                 turnLock = true;
 
-                // STEP 1: Show shuffling
                 messageEl.innerHTML = '🃏 <span class="step-highlight">STEP 1:</span> Shuffling deck...';
                 addStep('🃏 Shuffling deck...');
                 renderAll();
 
                 setTimeout(() => {
-                    // STEP 2: Select declarer
                     messageEl.innerHTML = '🎯 <span class="step-highlight">STEP 2:</span> Giving one card to each player to determine declarer...';
                     addStep('🎯 Dealing one card to each player...');
                     renderAll();
@@ -1129,7 +1207,6 @@
                         renderAll();
 
                         setTimeout(() => {
-                            // STEP 3: Deal 5 cards
                             messageEl.innerHTML = '📤 <span class="step-highlight">STEP 3:</span> Dealing 5 cards to each player...';
                             addStep('📤 Dealing 5 cards to each player...');
                             renderAll();
@@ -1139,18 +1216,14 @@
                                     state.players[p].hand.push(deck.pop());
                                 }
                             }
-                            
-                            // Sort human's hand by suit
+
                             state.players[0].hand = sortCardsBySuit(state.players[0].hand);
                             renderAll();
 
                             setTimeout(() => {
-                                // STEP 4: Declare Rung
                                 if (rungDeclarer === 0) {
-                                    // Human declares - show selection
                                     showRungSelection();
                                 } else {
-                                    // AI declares
                                     aiDeclareRung();
                                 }
                             }, 1200);
@@ -1194,9 +1267,12 @@
                 const winIdx = getWinnerIndex(cards, leadSuit);
                 trickWinner = trickCards[winIdx].playerIdx;
                 trickCounts[trickWinner]++;
-                const msg = `🏆 ${PLAYER_NAMES[trickWinner]} wins trick! (${trickCounts[trickWinner]} total)`;
+                
+                const partner = PARTNER_MAP[trickWinner];
+                const team = (trickWinner === 0 || trickWinner === 1) ? 'Your Team' : 'Opponents';
+                const msg = `🏆 ${PLAYER_NAMES[trickWinner]} wins trick! (${team} - ${trickCounts[trickWinner]} total)`;
                 messageEl.innerHTML = msg;
-                addStep(`🏆 ${PLAYER_NAMES[trickWinner]} wins trick #${totalTricks+1}!`, true);
+                addStep(`🏆 ${PLAYER_NAMES[trickWinner]} wins trick #${totalTricks+1}! (${team})`, true);
                 totalTricks++;
                 updateBadges();
 
@@ -1284,9 +1360,11 @@
             function endRound() {
                 roundOver = true;
                 isAnimating = false;
-                const humanTricks = trickCounts[0];
-                messageEl.innerHTML = `🏁 <span class="step-highlight">ROUND OVER!</span> You won ${humanTricks} tricks.`;
-                addStep(`🏁 Round over! You won ${humanTricks} tricks`, true);
+                const partnerTotal = trickCounts[0] + trickCounts[1];
+                const opponentTotal = trickCounts[2] + trickCounts[3];
+                const winner = partnerTotal > opponentTotal ? 'Your Team (You + Usman)' : 'Opponents (Hassan + Zara)';
+                messageEl.innerHTML = `🏁 <span class="step-highlight">ROUND OVER!</span> ${winner} wins! (${partnerTotal} vs ${opponentTotal})`;
+                addStep(`🏁 Round over! ${winner} wins! (${partnerTotal} vs ${opponentTotal})`, true);
                 turnIndicator.textContent = 'ROUND END';
                 actionBtn.style.display = 'inline-block';
                 actionBtn.textContent = '🔄 New Round';
@@ -1300,23 +1378,43 @@
                 const overlay = document.createElement('div');
                 overlay.className = 'result-overlay';
                 overlay.id = 'result-overlay';
+                const partnerTotal = trickCounts[0] + trickCounts[1];
+                const opponentTotal = trickCounts[2] + trickCounts[3];
+                const winner = partnerTotal > opponentTotal ? 'Your Team' : 'Opponents';
+
                 let html = `
                     <div class="result-box">
                         <h2>🏆 Round Results</h2>
-                        <div class="result-row"><span>Player</span><span>Tricks Won</span></div>
-                `;
-                let maxTricks = Math.max(...trickCounts);
-                let winners = trickCounts.map((c, i) => c === maxTricks ? i : -1).filter(i => i !== -1);
-                for (let i = 0; i < 4; i++) {
-                    const isWinner = winners.includes(i);
-                    html += `
+                        <div class="result-row" style="font-weight:700; border-bottom:2px solid #f5e9b0;">
+                            <span>Team</span>
+                            <span>Tricks</span>
+                        </div>
                         <div class="result-row">
-                            <span>${isWinner ? '👑 ' : ''}${PLAYER_NAMES[i]}</span>
-                            <span>${trickCounts[i]} ${isWinner ? '🏆' : ''}</span>
+                            <span>🤝 Your Team (You + Usman) ${partnerTotal > opponentTotal ? '👑' : ''}</span>
+                            <span>${partnerTotal}</span>
+                        </div>
+                        <div class="result-row">
+                            <span>⚔️ Opponents (Hassan + Zara) ${opponentTotal > partnerTotal ? '👑' : ''}</span>
+                            <span>${opponentTotal}</span>
+                        </div>
+                        <div class="result-row" style="border-top:2px solid #3a5a3a; margin-top:8px; padding-top:8px; font-weight:700;">
+                            <span>🏆 Winner</span>
+                            <span>${winner}!</span>
+                        </div>
+                        <div style="margin-top:12px; border-top:1px solid #3a5a3a; padding-top:12px;">
+                            <div style="font-size:0.8rem; color:#b8a27b; text-align:center;">Individual Scores</div>
+                `;
+                for (let i = 0; i < 4; i++) {
+                    const isPartner = (i === 0 || i === 1);
+                    html += `
+                        <div class="result-row" style="font-size:0.85rem;">
+                            <span>${isPartner ? '🤝' : '⚔️'} ${PLAYER_NAMES[i]}</span>
+                            <span>${trickCounts[i]}</span>
                         </div>
                     `;
                 }
                 html += `
+                        </div>
                         <button class="result-close-btn" onclick="document.getElementById('result-overlay').remove()">Close</button>
                     </div>
                 `;
@@ -1326,7 +1424,6 @@
 
             // ------- render ----------
             function renderAll() {
-                // Human hand - sorted by suit
                 humanCardsEl.innerHTML = '';
                 const humanHand = state.players[0].hand;
                 const valid = (state.currentPlayer === 0 && !roundOver && !isAnimating && !waitingForRungDeclaration && dealingComplete) ? getValidMoves(0, humanHand) : [];
@@ -1342,7 +1439,7 @@
                     div.innerHTML = `<span class="corner">${c.rank}<span>${c.suit}</span></span>
                                  <span class="suit-big">${c.suit}</span>
                                  <span class="corner corner-bottom">${c.rank}<span>${c.suit}</span></span>`;
-                    
+
                     if (!waitingForRungDeclaration && state.currentPlayer === 0 && valid.includes(i) && !roundOver && !isAnimating && dealingComplete) {
                         div.style.cursor = 'pointer';
                         div.addEventListener('click', (e) => {
@@ -1351,11 +1448,10 @@
                             playCard(0, i);
                         });
                     }
-                    
+
                     humanCardsEl.appendChild(div);
                 });
 
-                // Computer hands - card backs
                 [c1cards, c2cards, c3cards].forEach((el, idx) => {
                     const pidx = idx + 1;
                     const hand = state.players[pidx].hand;
@@ -1367,7 +1463,6 @@
                     }
                 });
 
-                // Trick display
                 trickDisplay.innerHTML = '';
                 trickCards.forEach(t => {
                     const wrapper = document.createElement('div');
