@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Rung · Court Piece</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      background: #0a120a;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+      margin: 0;
+      padding: 12px;
+    }
+
+    #game-container {
+      max-width: 1100px;
+      width: 100%;
+      background: radial-gradient(ellipse at 50% 40%, #4a3020, #1f140a);
+      border-radius: 60px 60px 40px 40px;
+      box-shadow: 0 30px 50px rgba(0,0,0,0.9), inset 0 2px 8px #b8a27b30;
+      padding: 20px 20px 24px;
+      position: relative;
+      border: 8px solid #5a3d28;
+    }
+
+    /* wood grain overlay */
+    #game-container::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 52px 52px 32px 32px;
+      background-image: repeating-linear-gradient(90deg, #2a1a0a15 0px, #2a1a0a15 3px, #3d2b1a10 3px, #3d2b1a10 8px);
+      pointer-events: none;
+      mix-blend-mode: overlay;
+    }
+
+    #table {
+      position: relative;
+      background: radial-gradient(ellipse at 50% 50%, #3a7a3a, #1d4f1d 70%, #0f2f0f);
+      border-radius: 70px 70px 50px 50px;
+      padding: 14px 12px 10px;
+      box-shadow: inset 0 12px 20px rgba(0,0,0,0.7), inset 0 -4px 8px #2a5a2a80;
+      min-height: 600px;
+      display: flex;
+      flex-direction: column;
+      border: 2px solid #2a5a2a60;
+    }
+
+    /* felt texture */
+    #table::after {
+      content: '';
+      position: absolute;
+      inset: 6px;
+      border-radius: 60px 60px 40px 40px;
+      background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency="0.6" numOctaves="4" stitchTiles="stitch"/></filter><rect width="200" height="200" filter="url(%23n)" opacity="0.15"/></svg>');
+      pointer-events: none;
+      opacity: 0.5;
+      mix-blend-mode: overlay;
+    }
+
+    /* top bar */
+    #top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(0,0,0,0.6);
+      padding: 8px 18px;
+      border-radius: 60px;
+      margin-bottom: 8px;
+      color: #f5f0d7;
+      font-weight: 500;
+      font-size: 0.95rem;
+      backdrop-filter: blur(4px);
+      flex-wrap: wrap;
+      gap: 6px 14px;
+      border: 1px solid #b8a27b60;
+      position: relative;
+      z-index: 5;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    }
+
+    #rung-display {
+      background: #2a1a0a;
+      padding: 4px 20px;
+      border-radius: 40px;
+      font-size: 1.2rem;
+      font-weight: bold;
+      color: #f7e9b0;
+      box-shadow: inset 0 2px 6px #0f0804, 0 2px 8px rgba(0,0,0,0.5);
+      letter-spacing: 1px;
+      border: 1px solid #b8a27b40;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    #rung-display .rung-suit {
+      font-size: 1.8rem;
+      line-height: 1;
+    }
+    #rung-display .declarer {
+      font-size: 0.7rem;
+      font-weight: 400;
+      opacity: 0.9;
+      background: #1f140a80;
+      padding: 0 12px;
+      border-radius: 20px;
+      border-left: 1px solid #b8a27b40;
+      margin-left: 4px;
+    }
+
+    #phase-info {
+      background: #1a3a1a;
+      padding: 4px 16px;
+      border-radius: 30px;
+      font-size: 0.9rem;
+      border: 1px solid #4a7a4a60;
+    }
+
+    #turn-indicator {
+      background: #2a4f2a;
+      padding: 4px 20px;
+      border-radius: 30px;
+      font-weight: 600;
+      color: #f5e9b0;
+      border: 1px solid #6a9a6a60;
+      min-width: 100px;
+      text-align: center;
+    }
+
+    /* player zones */
+    .player-zone {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+      margin: 1px 0;
+      z-index: 2;
+    }
+
+    .player-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #efebd0;
+      background: #1a2a1acc;
+      padding: 2px 16px;
+      border-radius: 30px;
+      letter-spacing: 0.5px;
+      backdrop-filter: blur(2px);
+      border: 1px solid #b8a27b40;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+      margin-bottom: 2px;
+    }
+
+    .cards-container {
+      display: flex;
+      justify-content: center;
+      gap: 3px;
+      flex-wrap: wrap;
+      padding: 4px 2px;
+      min-height: 80px;
+      align-items: center;
+    }
+
+    /* REAL CARD STYLE — traditional, no pop animation */
+    .card {
+      width: 62px;
+      height: 88px;
+      background: #fcf9f2;
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.6), 0 0 0 1px #d6c9b0, inset 0 0 0 1px #fff8f0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      font-weight: 700;
+      font-size: 1rem;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+      position: relative;
+      flex-shrink: 0;
+      cursor: default;
+      color: #1a1a1a;
+      line-height: 1;
+    }
+    .card[data-suit="♥"], .card[data-suit="♦"] { color: #b31b1b; }
+    .card[data-suit="♠"], .card[data-suit="♣"] { color: #1a1a1a; }
+
+    .card .rank { font-size: 1.2rem; font-weight: 800; }
+    .card .suit-big { font-size: 2.2rem; margin-top: -4px; }
+    .card .corner {
+      position: absolute;
+      top: 5px;
+      left: 6px;
+      font-size: 0.7rem;
+      font-weight: 800;
+      line-height: 1.1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .card .corner-bottom {
+      bottom: 5px;
+      right: 6px;
+      top: unset;
+      left: unset;
+      transform: rotate(180deg);
+    }
+    .card-back {
+      background: #1f3f6b;
+      background-image: 
+        repeating-linear-gradient(45deg, #2b5a8a 0px, #2b5a8a 3px, #1a3a6a 3px, #1a3a6a 8px),
+        radial-gradient(circle at 30% 40%, #4a7aaa30, transparent 60%);
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5), inset 0 0 0 2px #4a6f9a, inset 0 0 12px #2a4a7a;
+      width: 58px;
+      height: 82px;
+      border: 1px solid #6a8fba;
+      position: relative;
+      flex-shrink: 0;
+    }
+    .card-back::after {
+      content: '♠';
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      color: #4a7aaa60;
+      font-weight: 400;
+      transform: rotate(12deg);
+    }
+
+    .human .card {
+      cursor: pointer;
+    }
+    .human .card:hover:not(.disabled) {
+      transform: translateY(-8px) scale(1.01);
+      box-shadow: 0 12px 24px rgba(0,0,0,0.5), 0 0 0 2px #f5e9b0;
+      z-index: 20;
+    }
+    .card.disabled {
+      opacity: 0.5;
+      filter: grayscale(0.5) brightness(0.9);
+      cursor: not-allowed;
+      transform: scale(0.95);
+    }
+
+    /* center area */
+    #center-area {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 110px;
+      gap: 12px;
+      flex-wrap: wrap;
+      padding: 4px 0;
+      position: relative;
+      z-index: 3;
+    }
+
+    .trick-card {
+      width: 54px;
+      height: 76px;
+      background: #fcf9f2;
+      border-radius: 8px;
+      box-shadow: 0 6px 16px rgba(0,0,0,0.6), 0 0 0 1px #d6c9b0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      font-weight: 700;
+      font-size: 0.9rem;
+      color: #1a1a1a;
+      transition: all 0.15s ease;
+      flex-shrink: 0;
+    }
+    .trick-card[data-suit="♥"], .trick-card[data-suit="♦"] { color: #b31b1b; }
+    .trick-card[data-suit="♠"], .trick-card[data-suit="♣"] { color: #1a1a1a; }
+    .trick-card .rank { font-size: 1rem; }
+    .trick-card .suit { font-size: 1.6rem; }
+
+    #message {
+      font-size: 0.9rem;
+      background: #0a1a0acc;
+      padding: 6px 20px;
+      border-radius: 40px;
+      color: #f5f0d7;
+      backdrop-filter: blur(4px);
+      border: 1px solid #b8a27b60;
+      font-weight: 400;
+      min-height: 2.8rem;
+      display: flex;
+      align-items: center;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      flex: 1;
+      min-width: 140px;
+      justify-content: center;
+    }
+
+    #action-btn {
+      background: #e6d7b0;
+      border: none;
+      padding: 8px 28px;
+      border-radius: 40px;
+      font-weight: 700;
+      font-size: 1rem;
+      color: #1f3a1f;
+      box-shadow: 0 5px 0 #8a7a5a, 0 6px 16px rgba(0,0,0,0.3);
+      transition: 0.05s linear;
+      cursor: pointer;
+      border: 1px solid #f5e9d0;
+    }
+    #action-btn:active {
+      transform: translateY(5px);
+      box-shadow: 0 1px 0 #8a7a5a;
+    }
+
+    /* responsive */
+    @media (max-width: 700px) {
+      .card { width: 48px; height: 68px; font-size: 0.75rem; }
+      .card .suit-big { font-size: 1.6rem; }
+      .card .corner { font-size: 0.55rem; }
+      .card-back { width: 44px; height: 64px; }
+      .trick-card { width: 42px; height: 60px; font-size: 0.7rem; }
+      #rung-display { font-size: 0.9rem; padding: 2px 14px; }
+      #top-bar { font-size: 0.7rem; padding: 4px 12px; }
+      #game-container { padding: 12px; }
+      #table { padding: 10px 6px; min-height: 460px; }
+      #center-area { min-height: 80px; gap: 6px; }
+    }
+    @media (max-width: 450px) {
+      .card { width: 40px; height: 58px; }
+      .card .suit-big { font-size: 1.2rem; }
+      .card-back { width: 36px; height: 54px; }
+      .trick-card { width: 36px; height: 50px; font-size: 0.6rem; }
+    }
+  </style>
+</head>
+<body>
+<div id="game-container">
+  <div id="table">
+    <div id="top-bar">
+      <div id="rung-display">
+        <span class="rung-suit">♠</span> RUNG
+        <span class="declarer">by You</span>
+      </div>
+      <div id="phase-info">Phase 1 · Trick 0/13</div>
+      <div id="turn-indicator">⏳ waiting</div>
+    </div>
+
+    <!-- computer 1 (top) -->
+    <div class="player-zone" id="zone-top">
+      <div class="player-label">🤖 Usman (C1)</div>
+      <div class="cards-container" id="computer1-cards"></div>
+    </div>
+
+    <!-- middle: computer2 & computer3 + center -->
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; flex-wrap:wrap;">
+      <div class="player-zone" style="flex:1; min-width:70px;">
+        <div class="player-label">🤖 Hassan (C2)</div>
+        <div class="cards-container" id="computer2-cards"></div>
+      </div>
+      <div id="center-area" style="flex:2; min-width:160px;">
+        <div id="message">⚡ Let's play Rung</div>
+        <div id="trick-display" style="display:flex; gap:6px; flex-wrap:wrap; justify-content:center;"></div>
+        <button id="action-btn" style="display:none;">🔄 New Round</button>
+      </div>
+      <div class="player-zone" style="flex:1; min-width:70px;">
+        <div class="player-label">🤖 Zara (C3)</div>
+        <div class="cards-container" id="computer3-cards"></div>
+      </div>
+    </div>
+
+    <!-- human zone -->
+    <div class="player-zone human" id="zone-human">
+      <div class="player-label">🧑 You</div>
+      <div class="cards-container" id="human-cards"></div>
+    </div>
+    <div style="font-size:0.65rem; color:#b8a27b; text-align:center; margin-top:2px; opacity:0.6;">Click a card to play · follow suit</div>
+  </div>
+</div>
+<script>
+  (function(){
+    // ------- constants ----------
+    const SUITS = ['♠','♥','♦','♣'];
+    const RANKS = ['A','K','Q','J','10','9','8','7','6','5','4','3','2'];
+    const RANK_VALUES = { A:14, K:13, Q:12, J:11, 10:10, 9:9, 8:8, 7:7, 6:6, 5:5, 4:4, 3:3, 2:2 };
+    const AI_NAMES = ['Usman', 'Hassan', 'Zara'];
+
+    // ------- state ----------
+    let state = {};
+    let trickCards = [];
+    let trickLeadSuit = null;
+    let trickLeadPlayer = -1;
+    let trickWinner = -1;
+    let phaseTricks = 0;
+    let totalTricks = 0;
+    let currentPhase = 1;
+    let phaseStart = 0;
+    let roundOver = false;
+    let turnLock = false;
+    let rungDeclarer = -1;
+    let isAnimating = false;
+
+    // DOM refs
+    const humanCardsEl = document.getElementById('human-cards');
+    const c1cards = document.getElementById('computer1-cards');
+    const c2cards = document.getElementById('computer2-cards');
+    const c3cards = document.getElementById('computer3-cards');
+    const trickDisplay = document.getElementById('trick-display');
+    const messageEl = document.getElementById('message');
+    const rungDisplay = document.getElementById('rung-display');
+    const phaseInfo = document.getElementById('phase-info');
+    const turnIndicator = document.getElementById('turn-indicator');
+    const actionBtn = document.getElementById('action-btn');
+
+    // ------- helpers ----------
+    function createDeck() {
+      const deck = [];
+      for (let s of SUITS) for (let r of RANKS) deck.push({ suit:s, rank:r, value:RANK_VALUES[r] });
+      return deck;
+    }
+    function shuffle(d) { for (let i=d.length-1; i>0; i--) { const j=Math.floor(Math.random()*(i+1)); [d[i],d[j]]=[d[j],d[i]]; } return d; }
+
+    function isTrump(c) { return c.suit === state.rungSuit; }
+
+    function getValidMoves(playerIdx, hand) {
+      if (trickLeadSuit === null) return hand.map((c,i)=>i);
+      const hasSuit = hand.some(c => c.suit === trickLeadSuit);
+      if (hasSuit) {
+        return hand.map((c,i)=>i).filter(i => hand[i].suit === trickLeadSuit);
+      } else {
+        return hand.map((c,i)=>i);
+      }
+    }
+
+    function compareCards(cardA, cardB, leadSuit) {
+      const aTrump = cardA.suit === state.rungSuit;
+      const bTrump = cardB.suit === state.rungSuit;
+      if (aTrump && !bTrump) return 1;
+      if (!aTrump && bTrump) return -1;
+      if (aTrump && bTrump) return cardA.value - cardB.value;
+      if (cardA.suit === cardB.suit) return cardA.value - cardB.value;
+      if (cardA.suit === leadSuit && cardB.suit !== leadSuit) return 1;
+      if (cardA.suit !== leadSuit && cardB.suit === leadSuit) return -1;
+      return 0;
+    }
+
+    function getWinnerIndex(cards, leadSuit) {
+      let bestIdx = 0;
+      for (let i=1; i<cards.length; i++) {
+        if (compareCards(cards[i], cards[bestIdx], leadSuit) > 0) bestIdx = i;
+      }
+      return bestIdx;
+    }
+
+    function getPhaseSizes() {
+      const remaining = 13 - totalTricks;
+      if (remaining <= 0) return [];
+      if (currentPhase === 1) {
+        let size = Math.min(13, Math.max(5, Math.floor(Math.random() * 9) + 5));
+        if (remaining - size > 0 && remaining - size < 2) size = remaining - 2;
+        if (size < 5) size = 5;
+        if (size > remaining) size = remaining;
+        return [size];
+      } else {
+        let size = Math.min(remaining, Math.floor(Math.random() * 7) + 2);
+        if (remaining - size > 0 && remaining - size < 2) size = remaining - 2;
+        if (size < 2) size = 2;
+        if (size > remaining) size = remaining;
+        return [size];
+      }
+    }
+
+    // ------- AI ----------
+    function aiChooseCard(playerIdx, hand) {
+      const valid = getValidMoves(playerIdx, hand);
+      if (valid.length === 0) return 0;
+      const leadSuit = trickLeadSuit;
+      const isLead = (trickLeadPlayer === playerIdx);
+      if (isLead || trickLeadSuit === null) {
+        const trumpCards = hand.filter(c => c.suit === state.rungSuit);
+        if (trumpCards.length > 0) {
+          let idx = hand.indexOf(trumpCards.reduce((a,b)=>a.value>b.value?a:b));
+          if (valid.includes(idx)) return idx;
+        }
+        let maxIdx = 0;
+        for (let i=1; i<hand.length; i++) if (hand[i].value > hand[maxIdx].value) maxIdx = i;
+        if (valid.includes(maxIdx)) return maxIdx;
+        return valid[0];
+      } else {
+        const hasLead = hand.some(c => c.suit === leadSuit);
+        if (hasLead) {
+          let best = -1, bestVal = -1;
+          for (let idx of valid) {
+            if (hand[idx].suit === leadSuit && hand[idx].value > bestVal) { bestVal = hand[idx].value; best = idx; }
+          }
+          if (best !== -1) return best;
+        }
+        const trumpIdx = hand.findIndex(c => c.suit === state.rungSuit);
+        if (trumpIdx !== -1 && valid.includes(trumpIdx)) return trumpIdx;
+        let lowIdx = valid[0];
+        for (let idx of valid) if (hand[idx].value < hand[lowIdx].value) lowIdx = idx;
+        return lowIdx;
+      }
+    }
+
+    // ------- game flow ----------
+    function startNewRound() {
+      const deck = shuffle(createDeck());
+      state = {
+        players: [
+          { name: 'You', hand: [] },
+          { name: 'Usman', hand: [] },
+          { name: 'Hassan', hand: [] },
+          { name: 'Zara', hand: [] }
+        ],
+        deck: deck,
+        rungSuit: null,
+        currentPlayer: 0,
+      };
+      for (let i=0; i<13; i++) for (let p=0; p<4; p++) state.players[p].hand.push(deck.pop());
+      
+      const suits = ['♠','♥','♦','♣'];
+      state.rungSuit = suits[Math.floor(Math.random()*4)];
+      rungDeclarer = Math.floor(Math.random()*4);
+      updateRungDisplay();
+
+      trickCards = [];
+      trickLeadSuit = null;
+      trickLeadPlayer = -1;
+      trickWinner = -1;
+      totalTricks = 0;
+      currentPhase = 1;
+      phaseStart = 0;
+      roundOver = false;
+      phaseTricks = 0;
+      isAnimating = false;
+      turnLock = false;
+      actionBtn.style.display = 'none';
+      startPhase();
+      renderAll();
+      messageEl.textContent = '🎯 New round! Click a card.';
+      turnIndicator.textContent = 'YOUR TURN';
+    }
+
+    function updateRungDisplay() {
+      const names = ['You', 'Usman', 'Hassan', 'Zara'];
+      rungDisplay.innerHTML = `
+        <span class="rung-suit">${state.rungSuit}</span> RUNG
+        <span class="declarer">by ${names[rungDeclarer]}</span>
+      `;
+    }
+
+    function startPhase() {
+      const sizes = getPhaseSizes();
+      if (sizes.length === 0) { endRound(); return; }
+      phaseTricks = sizes[0];
+      phaseStart = totalTricks;
+      if (trickWinner !== -1) state.currentPlayer = trickWinner;
+      else state.currentPlayer = 0;
+      trickLeadPlayer = state.currentPlayer;
+      trickLeadSuit = null;
+      trickCards = [];
+      trickWinner = -1;
+      renderAll();
+      if (state.currentPlayer !== 0) {
+        turnIndicator.textContent = '🤖 thinking...';
+        setTimeout(() => aiTurn(), 500);
+      } else {
+        turnIndicator.textContent = 'YOUR TURN';
+      }
+    }
+
+    function completeTrick() {
+      if (trickCards.length !== 4) return;
+      const cards = trickCards.map(t => t.card);
+      const leadSuit = trickCards[0].card.suit;
+      const winIdx = getWinnerIndex(cards, leadSuit);
+      trickWinner = trickCards[winIdx].playerIdx;
+      messageEl.textContent = `🏆 ${state.players[trickWinner].name} wins trick!`;
+      totalTricks++;
+      
+      isAnimating = true;
+      setTimeout(() => {
+        trickCards = [];
+        trickLeadSuit = null;
+        const doneInPhase = totalTricks - phaseStart;
+        if (doneInPhase >= phaseTricks || totalTricks >= 13) {
+          if (totalTricks >= 13) { endRound(); return; }
+          currentPhase++;
+          startPhase();
+        } else {
+          state.currentPlayer = trickWinner;
+          trickLeadPlayer = trickWinner;
+          renderAll();
+          if (state.currentPlayer !== 0) {
+            turnIndicator.textContent = '🤖 thinking...';
+            setTimeout(() => aiTurn(), 500);
+          } else {
+            turnIndicator.textContent = 'YOUR TURN';
+          }
+        }
+        isAnimating = false;
+        renderAll();
+      }, 600);
+    }
+
+    function playCard(playerIdx, cardIndex) {
+      if (roundOver || isAnimating || turnLock) return;
+      if (playerIdx !== state.currentPlayer) return;
+      const hand = state.players[playerIdx].hand;
+      if (cardIndex < 0 || cardIndex >= hand.length) return;
+      const card = hand[cardIndex];
+      const valid = getValidMoves(playerIdx, hand);
+      if (!valid.includes(cardIndex)) { messageEl.textContent = '❌ Illegal move!'; return; }
+
+      turnLock = true;
+      hand.splice(cardIndex, 1);
+      trickCards.push({ playerIdx, card });
+      if (trickLeadSuit === null) trickLeadSuit = card.suit;
+      
+      let next = (playerIdx + 1) % 4;
+      state.currentPlayer = next;
+      renderAll();
+
+      if (trickCards.length === 4) {
+        setTimeout(() => completeTrick(), 300);
+        setTimeout(() => { turnLock = false; }, 400);
+        return;
+      }
+
+      setTimeout(() => {
+        turnLock = false;
+        if (state.currentPlayer !== 0) {
+          turnIndicator.textContent = '🤖 thinking...';
+          setTimeout(() => aiTurn(), 400);
+        } else {
+          turnIndicator.textContent = 'YOUR TURN';
+        }
+        renderAll();
+      }, 300);
+    }
+
+    function aiTurn() {
+      if (roundOver || isAnimating) return;
+      const idx = state.currentPlayer;
+      if (idx === 0) return;
+      const hand = state.players[idx].hand;
+      if (hand.length === 0) return;
+      const choice = aiChooseCard(idx, hand);
+      setTimeout(() => playCard(idx, choice), 100);
+    }
+
+    function endRound() {
+      roundOver = true;
+      isAnimating = false;
+      const humanTricks = state.players[0].hand.length > 0 ? 13 - state.players[0].hand.length : 0;
+      messageEl.textContent = `🏁 Round over! You won ${humanTricks} tricks. Click "New Round"`;
+      turnIndicator.textContent = 'ROUND END';
+      actionBtn.style.display = 'inline-block';
+      actionBtn.textContent = '🔄 New Round';
+      actionBtn.onclick = () => { actionBtn.style.display='none'; startNewRound(); };
+      renderAll();
+    }
+
+    // ------- render ----------
+    function renderAll() {
+      // human hand - displayed in a row (flex wrap)
+      humanCardsEl.innerHTML = '';
+      const humanHand = state.players[0].hand;
+      const valid = (state.currentPlayer === 0 && !roundOver && !isAnimating) ? getValidMoves(0, humanHand) : [];
+      humanHand.forEach((c,i) => {
+        const div = document.createElement('div');
+        div.className = 'card';
+        if (state.currentPlayer !== 0 || roundOver || isAnimating || !valid.includes(i)) div.classList.add('disabled');
+        div.dataset.suit = c.suit;
+        div.innerHTML = `<span class="corner">${c.rank}<span>${c.suit}</span></span>
+                         <span class="suit-big">${c.suit}</span>
+                         <span class="corner corner-bottom">${c.rank}<span>${c.suit}</span></span>`;
+        if (state.currentPlayer === 0 && valid.includes(i) && !roundOver && !isAnimating) {
+          div.style.cursor = 'pointer';
+          div.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (turnLock || isAnimating) return;
+            playCard(0, i);
+          });
+        }
+        humanCardsEl.appendChild(div);
+      });
+
+      // computer hands - card backs in a row
+      [c1cards, c2cards, c3cards].forEach((el, idx) => {
+        const pidx = idx+1;
+        const hand = state.players[pidx].hand;
+        el.innerHTML = '';
+        for (let i=0; i<hand.length; i++) {
+          const back = document.createElement('div');
+          back.className = 'card-back';
+          el.appendChild(back);
+        }
+      });
+
+      // trick display
+      trickDisplay.innerHTML = '';
+      trickCards.forEach(t => {
+        const div = document.createElement('div');
+        div.className = 'trick-card';
+        div.dataset.suit = t.card.suit;
+        div.innerHTML = `<span class="rank">${t.card.rank}</span><span class="suit">${t.card.suit}</span>`;
+        trickDisplay.appendChild(div);
+      });
+
+      phaseInfo.textContent = `Phase ${currentPhase} · Trick ${totalTricks}/13`;
+      if (roundOver) phaseInfo.textContent = `🏁 Round over · ${totalTricks}/13`;
+    }
+
+    // ------- init ----------
+    startNewRound();
+  })();
+</script>
+</body>
+</html>
