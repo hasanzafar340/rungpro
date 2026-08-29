@@ -731,7 +731,7 @@
                 <!-- middle -->
                 <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; flex-wrap:wrap;">
                     <div class="player-zone" style="flex:1; min-width:70px;">
-                        <div class="player-label opponent" id="label-2">🤖 Hassan (C2) <span class="opponent-badge">⚔️</span> <span class="trick-count-badge" id="badge-2">0</span></div>
+                        <div class="player-label opponent" id="label-2">🤖 Ahmed (C2) <span class="opponent-badge">⚔️</span> <span class="trick-count-badge" id="badge-2">0</span></div>
                         <div class="cards-container" id="computer2-cards"></div>
                     </div>
                     <div id="center-area" style="flex:2; min-width:160px;">
@@ -764,7 +764,7 @@
                     <span class="team-score" id="team-partner-score">0</span>
                 </div>
                 <div class="team-row">
-                    <span class="team-label team-opponent">⚔️ Opponents (Hassan + Zara)</span>
+                    <span class="team-label team-opponent">⚔️ Opponents (Ahmed + Zara)</span>
                     <span class="team-score" id="team-opponent-score">0</span>
                 </div>
             </div>
@@ -778,7 +778,7 @@
             const SUITS = ['♠', '♥', '♦', '♣'];
             const RANKS = ['A', 'K', 'Q', 'J', '10', '9', '8', '7', '6', '5', '4', '3', '2'];
             const RANK_VALUES = { A: 14, K: 13, Q: 12, J: 11, 10: 10, 9: 9, 8: 8, 7: 7, 6: 6, 5: 5, 4: 4, 3: 3, 2: 2 };
-            const PLAYER_NAMES = ['You', 'Usman', 'Hassan', 'Zara'];
+            const PLAYER_NAMES = ['You', 'Usman', 'Ahmed', 'Zara'];
             const PLAYER_ICONS = ['🧑', '🤖', '🤖', '🤖'];
             const PARTNER_MAP = { 0: 1, 1: 0, 2: 3, 3: 2 };
 
@@ -1219,7 +1219,7 @@
                     players: [
                         { name: 'You', hand: [] },
                         { name: 'Usman', hand: [] },
-                        { name: 'Hassan', hand: [] },
+                        { name: 'Ahmed', hand: [] },
                         { name: 'Zara', hand: [] }
                     ],
                     deck: deck,
@@ -1248,7 +1248,7 @@
                 stepCounter = 0;
                 addStep('🔄 New round starting...', true);
                 addStep('🤝 Your partner is Usman (C1 - opposite you)', true);
-                addStep('⚔️ Opponents: Hassan (C2) and Zara (C3)', true);
+                addStep('⚔️ Opponents: Ahmed (C2) and Zara (C3)', true);
 
                 turnLock = true;
                 messageEl.innerHTML = '🃏 <span class="step-highlight">STEP 1:</span> Shuffling deck...';
@@ -1446,7 +1446,7 @@
                 isAnimating = false;
                 const partnerTotal = trickCounts[0] + trickCounts[1];
                 const opponentTotal = trickCounts[2] + trickCounts[3];
-                const winner = partnerTotal > opponentTotal ? 'Your Team (You + Usman)' : 'Opponents (Hassan + Zara)';
+                const winner = partnerTotal > opponentTotal ? 'Your Team (You + Usman)' : 'Opponents (Ahmed + Zara)';
                 messageEl.innerHTML = `🏁 <span class="step-highlight">ROUND OVER!</span> ${winner} wins! (${partnerTotal} vs ${opponentTotal})`;
                 addStep(`🏁 Round over! ${winner} wins! (${partnerTotal} vs ${opponentTotal})`, true);
                 turnIndicator.textContent = 'ROUND END';
@@ -1478,7 +1478,7 @@
                             <span>${partnerTotal}</span>
                         </div>
                         <div class="result-row">
-                            <span>⚔️ Opponents (Hassan + Zara) ${opponentTotal > partnerTotal ? '👑' : ''}</span>
+                            <span>⚔️ Opponents (Ahmed + Zara) ${opponentTotal > partnerTotal ? '👑' : ''}</span>
                             <span>${opponentTotal}</span>
                         </div>
                         <div class="result-row" style="border-top:2px solid #3a5a3a; margin-top:8px; padding-top:8px; font-weight:700;">
