@@ -722,13 +722,13 @@
                     <div id="turn-indicator">⏳ waiting</div>
                 </div>
 
-                <!-- computer 1 (top) - player index 1 (PARTNER - opposite to You) -->
+                <!-- computer 1 (top) - player index 1 (PARTNER) -->
                 <div class="player-zone" id="zone-top">
                     <div class="player-label partner" id="label-1">🤖 Usman (C1) <span class="partner-badge">🤝 Partner</span> <span class="trick-count-badge" id="badge-1">0</span></div>
                     <div class="cards-container" id="computer1-cards"></div>
                 </div>
 
-                <!-- middle: computer2 (left) & computer3 (right) + center -->
+                <!-- middle -->
                 <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; flex-wrap:wrap;">
                     <div class="player-zone" style="flex:1; min-width:70px;">
                         <div class="player-label opponent" id="label-2">🤖 Hassan (C2) <span class="opponent-badge">⚔️</span> <span class="trick-count-badge" id="badge-2">0</span></div>
@@ -746,7 +746,7 @@
                     </div>
                 </div>
 
-                <!-- human zone (bottom) - player index 0 -->
+                <!-- human zone (bottom) -->
                 <div class="player-zone human" id="zone-human">
                     <div class="player-label partner" id="label-0">🧑 You <span class="partner-badge">🤝 Partner: Usman</span> <span class="trick-count-badge" id="badge-0">0</span></div>
                     <div class="cards-container" id="human-cards"></div>
@@ -780,6 +780,7 @@
             const RANK_VALUES = { A: 14, K: 13, Q: 12, J: 11, 10: 10, 9: 9, 8: 8, 7: 7, 6: 6, 5: 5, 4: 4, 3: 3, 2: 2 };
             const PLAYER_NAMES = ['You', 'Usman', 'Hassan', 'Zara'];
             const PLAYER_ICONS = ['🧑', '🤖', '🤖', '🤖'];
+            const PARTNER_MAP = { 0: 1, 1: 0, 2: 3, 3: 2 };
 
             // ------- state ----------
             let state = {};
@@ -796,17 +797,9 @@
             let rungDeclarer = -1;
             let isAnimating = false;
             let trickCounts = [0, 0, 0, 0];
-            let gamePhase = 'play';
             let stepCounter = 0;
             let waitingForRungDeclaration = false;
             let dealingComplete = false;
-
-            // Partner setup: You (0) partner with Usman (1) - opposite sides
-            // Opponents: Hassan (2) and Zara (3) are partners
-            const PARTNER_MAP = { 0: 1, 1: 0, 2: 3, 3: 2 };
-            const TEAM_NAMES = ['Your Team (You + Usman)', 'Opponents (Hassan + Zara)'];
-            const TEAM_PARTNER = 0;
-            const TEAM_OPPONENT = 1;
 
             // DOM refs
             const humanCardsEl = document.getElementById('human-cards');
@@ -851,7 +844,6 @@
                 `;
                 stepLog.appendChild(entry);
                 stepLog.scrollTop = stepLog.scrollHeight;
-
                 while (stepLog.children.length > 50) {
                     stepLog.removeChild(stepLog.firstChild);
                 }
@@ -934,7 +926,6 @@
                 updateTeamScores();
             }
 
-            // Sort cards by suit (Spades, Hearts, Diamonds, Clubs) then by rank
             function sortCardsBySuit(cards) {
                 const suitOrder = { '♠': 0, '♥': 1, '♦': 2, '♣': 3 };
                 return cards.sort((a, b) => {
@@ -945,41 +936,138 @@
                 });
             }
 
-            // ------- AI ----------
+            // ------- HARD AI - Advanced Strategy ----------
             function aiChooseCard(playerIdx, hand) {
                 const valid = getValidMoves(playerIdx, hand);
                 if (valid.length === 0) return 0;
+                
                 const leadSuit = trickLeadSuit;
                 const isLead = (trickLeadPlayer === playerIdx);
+                const partner = PARTNER_MAP[playerIdx];
+                const isPartnerLead = (trickLeadPlayer === partner);
+                const trump = state.rungSuit;
+                
+                // Check if partner is winning or if we're trying to help partner
+                let partnerIsWinning = false;
+                if (trickCards.length > 0 && !isLead) {
+                    // Check if partner has played and is currently winning
+                    const partnerCard = trickCards.find(t => t.playerIdx === partner);
+                    if (partnerCard) {
+                        const allCards = trickCards.map(t => t.card);
+                        const currentLeadSuit = trickCards[0].card.suit;
+                        const bestIdx = getWinnerIndex(allCards, currentLeadSuit);
+                        partnerIsWinning = (trickCards[bestIdx].playerIdx === partner);
+                    }
+                }
+
+                // Strategy 1: If leading, play strategically
                 if (isLead || trickLeadSuit === null) {
-                    const trumpCards = hand.filter(c => c.suit === state.rungSuit);
-                    if (trumpCards.length > 0) {
+                    // If we have trump, consider playing it to take control
+                    const trumpCards = hand.filter(c => c.suit === trump);
+                    const highCards = hand.filter(c => c.value >= 12);
+                    
+                    // If we have a very strong hand, lead with a high card
+                    if (highCards.length > 0 && Math.random() < 0.4) {
+                        let idx = hand.indexOf(highCards.reduce((a, b) => a.value > b.value ? a : b));
+                        if (valid.includes(idx)) return idx;
+                    }
+                    
+                    // Lead with trump if we have at least 3 trumps
+                    if (trumpCards.length >= 3 && Math.random() < 0.5) {
                         let idx = hand.indexOf(trumpCards.reduce((a, b) => a.value > b.value ? a : b));
                         if (valid.includes(idx)) return idx;
                     }
+                    
+                    // Play highest card
                     let maxIdx = 0;
                     for (let i = 1; i < hand.length; i++)
                         if (hand[i].value > hand[maxIdx].value) maxIdx = i;
                     if (valid.includes(maxIdx)) return maxIdx;
                     return valid[0];
-                } else {
-                    const hasLead = hand.some(c => c.suit === leadSuit);
-                    if (hasLead) {
-                        let best = -1,
-                            bestVal = -1;
-                        for (let idx of valid) {
-                            if (hand[idx].suit === leadSuit && hand[idx].value > bestVal) { bestVal = hand[idx].value;
-                                best = idx; }
-                        }
-                        if (best !== -1) return best;
+                }
+
+                // Strategy 2: Partner is winning - play low to let partner win
+                if (partnerIsWinning && !isPartnerLead) {
+                    // Play lowest card that follows suit or lowest overall
+                    const suitCards = hand.filter(c => c.suit === leadSuit);
+                    if (suitCards.length > 0) {
+                        let lowIdx = hand.indexOf(suitCards.reduce((a, b) => a.value < b.value ? a : b));
+                        if (valid.includes(lowIdx)) return lowIdx;
                     }
-                    const trumpIdx = hand.findIndex(c => c.suit === state.rungSuit);
-                    if (trumpIdx !== -1 && valid.includes(trumpIdx)) return trumpIdx;
+                    // Play lowest trump if available
+                    const trumpCards = hand.filter(c => c.suit === trump);
+                    if (trumpCards.length > 0) {
+                        let idx = hand.indexOf(trumpCards.reduce((a, b) => a.value < b.value ? a : b));
+                        if (valid.includes(idx)) return idx;
+                    }
                     let lowIdx = valid[0];
                     for (let idx of valid)
                         if (hand[idx].value < hand[lowIdx].value) lowIdx = idx;
                     return lowIdx;
                 }
+
+                // Strategy 3: Try to win the trick
+                const hasSuit = hand.some(c => c.suit === leadSuit);
+                if (hasSuit) {
+                    // Find highest card in lead suit
+                    let best = -1, bestVal = -1;
+                    for (let idx of valid) {
+                        if (hand[idx].suit === leadSuit && hand[idx].value > bestVal) {
+                            // Check if this card can beat the current best
+                            const currentBest = trickCards.length > 0 ? trickCards.reduce((a, b) => 
+                                compareCards(a.card, b.card, leadSuit) > 0 ? a : b
+                            ).card : null;
+                            
+                            if (currentBest && hand[idx].suit === leadSuit) {
+                                if (hand[idx].value > currentBest.value) {
+                                    bestVal = hand[idx].value;
+                                    best = idx;
+                                }
+                            } else {
+                                bestVal = hand[idx].value;
+                                best = idx;
+                            }
+                        }
+                    }
+                    // If we can win, play the winning card
+                    if (best !== -1 && trickCards.length > 0) {
+                        const currentBest = trickCards.reduce((a, b) => 
+                            compareCards(a.card, b.card, leadSuit) > 0 ? a : b
+                        ).card;
+                        if (hand[best].suit === leadSuit && hand[best].value > currentBest.value) {
+                            return best;
+                        }
+                    }
+                    // Otherwise play low to save high cards
+                    if (best !== -1) {
+                        // If we have high cards, play the lowest possible
+                        const suitCards = hand.filter(c => c.suit === leadSuit);
+                        let lowIdx = hand.indexOf(suitCards.reduce((a, b) => a.value < b.value ? a : b));
+                        if (valid.includes(lowIdx)) return lowIdx;
+                    }
+                    return valid[0];
+                }
+
+                // Strategy 4: No lead suit - play trump to win or play low
+                // Check if we can win with trump
+                const trumpCards = hand.filter(c => c.suit === trump);
+                if (trumpCards.length > 0) {
+                    // If partner is losing, play trump to help
+                    if (!partnerIsWinning) {
+                        let idx = hand.indexOf(trumpCards.reduce((a, b) => a.value > b.value ? a : b));
+                        if (valid.includes(idx)) return idx;
+                    } else {
+                        // Partner is winning, play low trump or discard
+                        let idx = hand.indexOf(trumpCards.reduce((a, b) => a.value < b.value ? a : b));
+                        if (valid.includes(idx)) return idx;
+                    }
+                }
+                
+                // Play lowest card
+                let lowIdx = valid[0];
+                for (let idx of valid)
+                    if (hand[idx].value < hand[lowIdx].value) lowIdx = idx;
+                return lowIdx;
             }
 
             // ------- Rung Declaration ----------
@@ -988,7 +1076,6 @@
                 rungInstruction.style.display = 'block';
                 messageEl.innerHTML = '🎯 <span class="step-highlight">Click a card from your hand</span> to declare it as Rung (Trump)!';
                 turnIndicator.textContent = 'CHOOSE RUNG';
-
                 renderAll();
 
                 document.querySelectorAll('#human-cards .card').forEach(card => {
@@ -1010,10 +1097,8 @@
                 if (!waitingForRungDeclaration) return;
                 waitingForRungDeclaration = false;
                 rungInstruction.style.display = 'none';
-
                 state.rungSuit = suit;
                 updateRungDisplay();
-
                 messageEl.innerHTML = `📢 <span class="step-highlight">You declared ${suit}</span> as Rung (Trump) using ${cardName}!`;
                 addStep(`📢 You declared ${suit} as Rung using ${cardName}!`, true);
 
@@ -1023,43 +1108,35 @@
                 });
 
                 renderAll();
-
                 setTimeout(() => {
-                    messageEl.innerHTML = '📤 <span class="step-highlight">STEP 5:</span> Dealing 4 more cards to each player...';
+                    messageEl.innerHTML = '📤 <span class="step-highlight">STEP 5:</span> Dealing 4 more cards...';
                     addStep('📤 Dealing 4 more cards to each player...');
                     renderAll();
-
                     for (let i = 0; i < 4; i++) {
                         for (let p = 0; p < 4; p++) {
                             state.players[p].hand.push(state.deck.pop());
                         }
                     }
                     renderAll();
-
                     setTimeout(() => {
-                        messageEl.innerHTML = '📤 <span class="step-highlight">STEP 6:</span> Dealing final 4 cards to each player...';
+                        messageEl.innerHTML = '📤 <span class="step-highlight">STEP 6:</span> Dealing final 4 cards...';
                         addStep('📤 Dealing final 4 cards to each player...');
                         renderAll();
-
                         for (let i = 0; i < 4; i++) {
                             for (let p = 0; p < 4; p++) {
                                 state.players[p].hand.push(state.deck.pop());
                             }
                         }
-
                         state.players[0].hand = sortCardsBySuit(state.players[0].hand);
-
                         gamePhase = 'play';
                         state.currentPlayer = rungDeclarer;
                         trickLeadPlayer = rungDeclarer;
-
-                        messageEl.innerHTML = `🎯 <span class="step-highlight">READY!</span> ${PLAYER_NAMES[rungDeclarer]} leads the first trick!`;
+                        messageEl.innerHTML = `🎯 <span class="step-highlight">READY!</span> ${PLAYER_NAMES[rungDeclarer]} leads!`;
                         addStep(`🎯 ${PLAYER_NAMES[rungDeclarer]} leads the first trick!`, true);
                         turnLock = false;
                         dealingComplete = true;
                         startPhase();
                         renderAll();
-
                         if (state.currentPlayer !== 0) {
                             turnIndicator.textContent = '🤖 thinking...';
                             setTimeout(() => aiTurn(), 800);
@@ -1071,51 +1148,60 @@
             }
 
             function aiDeclareRung() {
-                const suits = ['♠', '♥', '♦', '♣'];
-                const suit = suits[Math.floor(Math.random() * 4)];
-                state.rungSuit = suit;
+                // AI chooses Rung strategically based on hand
+                const hand = state.players[rungDeclarer].hand;
+                const suitCounts = {};
+                for (let c of hand) {
+                    suitCounts[c.suit] = (suitCounts[c.suit] || 0) + 1;
+                }
+                // Choose suit with most cards (highest count), or highest value if tie
+                let bestSuit = '♠';
+                let bestCount = 0;
+                let bestValue = 0;
+                for (let s of SUITS) {
+                    const count = suitCounts[s] || 0;
+                    const value = hand.filter(c => c.suit === s).reduce((sum, c) => sum + c.value, 0);
+                    if (count > bestCount || (count === bestCount && value > bestValue)) {
+                        bestCount = count;
+                        bestValue = value;
+                        bestSuit = s;
+                    }
+                }
+                state.rungSuit = bestSuit;
                 updateRungDisplay();
-
-                messageEl.innerHTML = `📢 <span class="step-highlight">${PLAYER_NAMES[rungDeclarer]}</span> declares ${suit} as Rung (Trump)!`;
-                addStep(`📢 ${PLAYER_NAMES[rungDeclarer]} declares ${suit} as Rung!`, true);
+                messageEl.innerHTML = `📢 <span class="step-highlight">${PLAYER_NAMES[rungDeclarer]}</span> declares ${bestSuit} as Rung! (has ${bestCount} cards)`;
+                addStep(`📢 ${PLAYER_NAMES[rungDeclarer]} declares ${bestSuit} as Rung! (${bestCount} cards)`, true);
                 renderAll();
 
                 setTimeout(() => {
-                    messageEl.innerHTML = '📤 <span class="step-highlight">STEP 5:</span> Dealing 4 more cards to each player...';
+                    messageEl.innerHTML = '📤 <span class="step-highlight">STEP 5:</span> Dealing 4 more cards...';
                     addStep('📤 Dealing 4 more cards to each player...');
                     renderAll();
-
                     for (let i = 0; i < 4; i++) {
                         for (let p = 0; p < 4; p++) {
                             state.players[p].hand.push(state.deck.pop());
                         }
                     }
                     renderAll();
-
                     setTimeout(() => {
-                        messageEl.innerHTML = '📤 <span class="step-highlight">STEP 6:</span> Dealing final 4 cards to each player...';
+                        messageEl.innerHTML = '📤 <span class="step-highlight">STEP 6:</span> Dealing final 4 cards...';
                         addStep('📤 Dealing final 4 cards to each player...');
                         renderAll();
-
                         for (let i = 0; i < 4; i++) {
                             for (let p = 0; p < 4; p++) {
                                 state.players[p].hand.push(state.deck.pop());
                             }
                         }
-
                         state.players[0].hand = sortCardsBySuit(state.players[0].hand);
-
                         gamePhase = 'play';
                         state.currentPlayer = rungDeclarer;
                         trickLeadPlayer = rungDeclarer;
-
-                        messageEl.innerHTML = `🎯 <span class="step-highlight">READY!</span> ${PLAYER_NAMES[rungDeclarer]} leads the first trick!`;
+                        messageEl.innerHTML = `🎯 <span class="step-highlight">READY!</span> ${PLAYER_NAMES[rungDeclarer]} leads!`;
                         addStep(`🎯 ${PLAYER_NAMES[rungDeclarer]} leads the first trick!`, true);
                         turnLock = false;
                         dealingComplete = true;
                         startPhase();
                         renderAll();
-
                         if (state.currentPlayer !== 0) {
                             turnIndicator.textContent = '🤖 thinking...';
                             setTimeout(() => aiTurn(), 800);
@@ -1165,13 +1251,12 @@
                 addStep('⚔️ Opponents: Hassan (C2) and Zara (C3)', true);
 
                 turnLock = true;
-
                 messageEl.innerHTML = '🃏 <span class="step-highlight">STEP 1:</span> Shuffling deck...';
                 addStep('🃏 Shuffling deck...');
                 renderAll();
 
                 setTimeout(() => {
-                    messageEl.innerHTML = '🎯 <span class="step-highlight">STEP 2:</span> Giving one card to each player to determine declarer...';
+                    messageEl.innerHTML = '🎯 <span class="step-highlight">STEP 2:</span> Giving one card to each player...';
                     addStep('🎯 Dealing one card to each player...');
                     renderAll();
 
@@ -1268,7 +1353,6 @@
                 trickWinner = trickCards[winIdx].playerIdx;
                 trickCounts[trickWinner]++;
                 
-                const partner = PARTNER_MAP[trickWinner];
                 const team = (trickWinner === 0 || trickWinner === 1) ? 'Your Team' : 'Opponents';
                 const msg = `🏆 ${PLAYER_NAMES[trickWinner]} wins trick! (${team} - ${trickCounts[trickWinner]} total)`;
                 messageEl.innerHTML = msg;
