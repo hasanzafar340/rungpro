@@ -21,10 +21,137 @@
             font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
             margin: 0;
             padding: 12px;
+            perspective: 1200px;
+        }
+
+        /* Difficulty Selection Overlay */
+        #difficulty-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.85);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 200;
+            backdrop-filter: blur(8px);
+            animation: fadeInOverlay 0.5s ease-out;
+        }
+
+        @keyframes fadeInOverlay {
+            0% { opacity: 0; transform: scale(0.95); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+
+        #difficulty-box {
+            background: radial-gradient(ellipse at 50% 40%, #2a3a2a, #1a2a1a);
+            border: 3px solid #f5e9b0;
+            border-radius: 40px;
+            padding: 40px 50px;
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.9), inset 0 0 40px rgba(245, 233, 176, 0.05);
+        }
+
+        #difficulty-box h1 {
+            color: #f5e9b0;
+            font-size: 2rem;
+            margin-bottom: 8px;
+            letter-spacing: 2px;
+        }
+
+        #difficulty-box .subtitle {
+            color: #b8a27b;
+            font-size: 0.9rem;
+            margin-bottom: 25px;
+        }
+
+        .difficulty-btn {
+            display: block;
+            width: 100%;
+            padding: 14px 20px;
+            margin: 10px 0;
+            border: 2px solid #b8a27b60;
+            border-radius: 16px;
+            background: rgba(0, 0, 0, 0.4);
+            color: #f5f0d7;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            letter-spacing: 1px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .difficulty-btn:hover {
+            transform: translateY(-3px) scale(1.02);
+            border-color: #f5e9b0;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .difficulty-btn:active {
+            transform: scale(0.97);
+        }
+
+        .difficulty-btn .diff-icon {
+            font-size: 1.5rem;
+            margin-right: 10px;
+        }
+
+        .difficulty-btn .diff-desc {
+            font-size: 0.7rem;
+            font-weight: 400;
+            color: #b8a27b;
+            display: block;
+            margin-top: 2px;
+        }
+
+        .difficulty-btn.easy {
+            border-color: #7ddf7d;
+        }
+        .difficulty-btn.easy:hover {
+            background: rgba(125, 223, 125, 0.15);
+            border-color: #7ddf7d;
+        }
+
+        .difficulty-btn.medium {
+            border-color: #f5e9b0;
+        }
+        .difficulty-btn.medium:hover {
+            background: rgba(245, 233, 176, 0.15);
+            border-color: #f5e9b0;
+        }
+
+        .difficulty-btn.hard {
+            border-color: #ff7d7d;
+        }
+        .difficulty-btn.hard:hover {
+            background: rgba(255, 125, 125, 0.15);
+            border-color: #ff7d7d;
+        }
+
+        .difficulty-btn .selected-check {
+            display: none;
+            position: absolute;
+            right: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #f5e9b0;
+            font-size: 1.2rem;
+        }
+
+        .difficulty-btn.selected .selected-check {
+            display: block;
+        }
+
+        .difficulty-btn.selected {
+            border-color: #f5e9b0;
+            background: rgba(245, 233, 176, 0.1);
         }
 
         #app-wrapper {
-            display: flex;
+            display: none;
             gap: 16px;
             max-width: 1300px;
             width: 100%;
@@ -75,7 +202,6 @@
             mix-blend-mode: overlay;
         }
 
-        /* Side Panel */
         #side-panel {
             width: 260px;
             min-width: 200px;
@@ -177,7 +303,6 @@
             100% { opacity: 1; transform: translateX(0); }
         }
 
-        /* Top Bar */
         #top-bar {
             display: flex;
             justify-content: space-between;
@@ -313,12 +438,17 @@
             align-items: center;
         }
 
+        /* 3D Card Styles */
         .card {
             width: 62px;
             height: 88px;
             background: #fcf9f2;
             border-radius: 10px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6), 0 0 0 1px #d6c9b0, inset 0 0 0 1px #fff8f0;
+            box-shadow: 
+                0 4px 12px rgba(0, 0, 0, 0.6),
+                0 0 0 1px #d6c9b0,
+                inset 0 0 0 1px #fff8f0,
+                0 8px 20px rgba(0, 0, 0, 0.3);
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -331,7 +461,32 @@
             cursor: default;
             color: #1a1a1a;
             line-height: 1;
+            transform-style: preserve-3d;
+            transform: rotateY(2deg) rotateX(2deg);
         }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            inset: 2px;
+            border-radius: 8px;
+            background: linear-gradient(135deg, rgba(255,255,255,0.3) 0%, transparent 50%, rgba(0,0,0,0.05) 100%);
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        .card .card-face {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            border-radius: 10px;
+            background: #fcf9f2;
+        }
+
         .card[data-suit="♥"],
         .card[data-suit="♦"] {
             color: #b31b1b;
@@ -344,10 +499,12 @@
         .card .rank {
             font-size: 1.2rem;
             font-weight: 800;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.1);
         }
         .card .suit-big {
             font-size: 2.2rem;
             margin-top: -4px;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
         .card .corner {
             position: absolute;
@@ -359,6 +516,7 @@
             display: flex;
             flex-direction: column;
             align-items: center;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.05);
         }
         .card .corner-bottom {
             bottom: 5px;
@@ -367,19 +525,37 @@
             left: unset;
             transform: rotate(180deg);
         }
+
+        /* 3D Card Back */
         .card-back {
             background: #1f3f6b;
             background-image:
                 repeating-linear-gradient(45deg, #2b5a8a 0px, #2b5a8a 3px, #1a3a6a 3px, #1a3a6a 8px),
                 radial-gradient(circle at 30% 40%, #4a7aaa30, transparent 60%);
             border-radius: 10px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5), inset 0 0 0 2px #4a6f9a, inset 0 0 12px #2a4a7a;
+            box-shadow: 
+                0 4px 12px rgba(0, 0, 0, 0.5),
+                inset 0 0 0 2px #4a6f9a,
+                inset 0 0 12px #2a4a7a,
+                0 8px 20px rgba(0, 0, 0, 0.3);
             width: 58px;
             height: 82px;
             border: 1px solid #6a8fba;
             position: relative;
             flex-shrink: 0;
+            transform: rotateY(-2deg) rotateX(2deg);
+            transform-style: preserve-3d;
         }
+
+        .card-back::before {
+            content: '';
+            position: absolute;
+            inset: 4px;
+            border-radius: 6px;
+            background: repeating-linear-gradient(45deg, rgba(255,255,255,0.05) 0px, rgba(255,255,255,0.05) 2px, transparent 2px, transparent 6px);
+            pointer-events: none;
+        }
+
         .card-back::after {
             content: '♠';
             position: absolute;
@@ -390,7 +566,8 @@
             font-size: 2rem;
             color: #4a7aaa60;
             font-weight: 400;
-            transform: rotate(12deg);
+            transform: rotate(12deg) translateZ(2px);
+            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
         }
 
         .human .card {
@@ -398,18 +575,18 @@
             transition: transform 0.3s ease, box-shadow 0.3s ease, z-index 0.3s;
         }
         .human .card:hover:not(.disabled) {
-            transform: scale(1.15) translateY(-12px);
-            box-shadow: 0 16px 32px rgba(0, 0, 0, 0.6), 0 0 0 3px #f5e9b0;
+            transform: translateY(-12px) rotateY(0deg) rotateX(0deg) scale(1.05);
+            box-shadow: 0 16px 32px rgba(0, 0, 0, 0.6), 0 0 0 3px #f5e9b0, 0 8px 40px rgba(0, 0, 0, 0.4);
             z-index: 50;
         }
         .card.disabled {
             opacity: 0.5;
             filter: grayscale(0.5) brightness(0.9);
             cursor: not-allowed;
-            transform: scale(0.95);
+            transform: rotateY(0deg) rotateX(0deg) scale(0.95);
         }
         .human .card.disabled:hover {
-            transform: scale(0.95);
+            transform: rotateY(0deg) rotateX(0deg) scale(0.95);
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
         }
 
@@ -417,16 +594,17 @@
             cursor: pointer;
             border: 3px solid #f5e9b0;
             animation: pulse-gold 1s ease-in-out infinite;
+            transform: translateY(-8px) rotateY(0deg) rotateX(0deg);
         }
         .card.rung-selectable:hover {
-            transform: scale(1.2) translateY(-15px);
+            transform: translateY(-18px) rotateY(0deg) rotateX(0deg) scale(1.08);
             box-shadow: 0 20px 40px rgba(0, 0, 0, 0.7), 0 0 0 4px #f5e9b0;
             z-index: 60;
         }
 
         @keyframes pulse-gold {
-            0%, 100% { box-shadow: 0 0 10px rgba(245, 233, 176, 0.3); }
-            50% { box-shadow: 0 0 25px rgba(245, 233, 176, 0.7); }
+            0%, 100% { box-shadow: 0 0 10px rgba(245, 233, 176, 0.3), 0 4px 12px rgba(0,0,0,0.5); }
+            50% { box-shadow: 0 0 25px rgba(245, 233, 176, 0.7), 0 4px 20px rgba(0,0,0,0.5); }
         }
 
         #center-area {
@@ -447,15 +625,16 @@
             align-items: center;
             gap: 2px;
             animation: slideIn 0.6s ease-out;
+            perspective: 600px;
         }
 
         @keyframes slideIn {
             0% {
-                transform: scale(0.5) translateY(-40px);
+                transform: translateY(-40px) rotateY(90deg) scale(0.5);
                 opacity: 0;
             }
             100% {
-                transform: scale(1) translateY(0);
+                transform: translateY(0) rotateY(0deg) scale(1);
                 opacity: 1;
             }
         }
@@ -465,7 +644,7 @@
             height: 76px;
             background: #fcf9f2;
             border-radius: 8px;
-            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.6), 0 0 0 1px #d6c9b0;
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.6), 0 0 0 1px #d6c9b0, 0 4px 12px rgba(0,0,0,0.2);
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -474,7 +653,19 @@
             font-size: 0.9rem;
             color: #1a1a1a;
             flex-shrink: 0;
+            transform: rotateY(2deg) rotateX(2deg);
+            transform-style: preserve-3d;
         }
+
+        .trick-card::before {
+            content: '';
+            position: absolute;
+            inset: 2px;
+            border-radius: 6px;
+            background: linear-gradient(135deg, rgba(255,255,255,0.3) 0%, transparent 50%, rgba(0,0,0,0.05) 100%);
+            pointer-events: none;
+        }
+
         .trick-card[data-suit="♥"],
         .trick-card[data-suit="♦"] {
             color: #b31b1b;
@@ -612,16 +803,6 @@
             animation: pulse-gold 1.5s ease-in-out infinite;
         }
 
-        .turn-arrow {
-            display: inline-block;
-            animation: arrowPulse 0.8s ease-in-out infinite;
-        }
-
-        @keyframes arrowPulse {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.5; transform: scale(1.2); }
-        }
-
         .turn-order-display {
             font-size: 0.7rem;
             color: #b8a27b;
@@ -635,6 +816,15 @@
         .turn-order-display .highlight-turn {
             color: #f5e9b0;
             font-weight: 700;
+        }
+
+        .difficulty-badge {
+            font-size: 0.6rem;
+            background: #2a4a2a;
+            padding: 2px 12px;
+            border-radius: 20px;
+            color: #f5e9b0;
+            border: 1px solid #f5e9b040;
         }
 
         @media (max-width: 900px) {
@@ -653,6 +843,16 @@
             .step-entry {
                 font-size: 0.65rem;
                 padding: 4px 8px;
+            }
+            #difficulty-box {
+                padding: 30px 20px;
+            }
+            #difficulty-box h1 {
+                font-size: 1.5rem;
+            }
+            .difficulty-btn {
+                padding: 12px 16px;
+                font-size: 1rem;
             }
         }
 
@@ -721,6 +921,29 @@
     </style>
 </head>
 <body>
+    <!-- Difficulty Selection Overlay -->
+    <div id="difficulty-overlay">
+        <div id="difficulty-box">
+            <h1>♠ RUNG ♠</h1>
+            <div class="subtitle">Court Piece · Select Difficulty</div>
+            <button class="difficulty-btn easy" data-difficulty="easy" onclick="selectDifficulty('easy')">
+                <span class="diff-icon">🌱</span> Easy
+                <span class="diff-desc">AI plays randomly · Good for beginners</span>
+                <span class="selected-check">✓</span>
+            </button>
+            <button class="difficulty-btn medium" data-difficulty="medium" onclick="selectDifficulty('medium')">
+                <span class="diff-icon">⚡</span> Medium
+                <span class="diff-desc">AI uses basic strategy · Fair challenge</span>
+                <span class="selected-check">✓</span>
+            </button>
+            <button class="difficulty-btn hard" data-difficulty="hard" onclick="selectDifficulty('hard')">
+                <span class="diff-icon">🔥</span> Hard
+                <span class="diff-desc">AI uses advanced tactics · Expert level</span>
+                <span class="selected-check">✓</span>
+            </button>
+        </div>
+    </div>
+
     <div id="app-wrapper">
         <div id="game-container">
             <div id="table">
@@ -739,10 +962,10 @@
                     <div class="cards-container" id="computer1-cards"></div>
                 </div>
 
-                <!-- Middle: Arslan (C2) - LEFT - Player 2 & Zara (C3) - RIGHT - Player 3 -->
+                <!-- Middle: Hassan (C2) - LEFT - Player 2 & Zara (C3) - RIGHT - Player 3 -->
                 <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; flex-wrap:wrap;">
                     <div class="player-zone" style="flex:1; min-width:70px;">
-                        <div class="player-label opponent" id="label-2">🤖 Arslan (C2) <span class="opponent-badge">⚔️</span> <span class="trick-count-badge" id="badge-2">0</span></div>
+                        <div class="player-label opponent" id="label-2">🤖 Hassan (C2) <span class="opponent-badge">⚔️</span> <span class="trick-count-badge" id="badge-2">0</span></div>
                         <div class="cards-container" id="computer2-cards"></div>
                     </div>
                     <div id="center-area" style="flex:2; min-width:160px;">
@@ -763,7 +986,8 @@
                     <div class="cards-container" id="human-cards"></div>
                 </div>
                 <div class="turn-order-display" id="turn-order-display">
-                    🔄 Anticlockwise: <span class="highlight-turn" id="current-turn-display">You</span> → Zara → Usman → Arslan → You
+                    🔄 Anticlockwise: <span class="highlight-turn" id="current-turn-display">You</span> → Zara → Usman → Hassan → You
+                    <span class="difficulty-badge" id="difficulty-badge">Medium</span>
                 </div>
             </div>
         </div>
@@ -777,7 +1001,7 @@
                     <span class="team-score" id="team-partner-score">0</span>
                 </div>
                 <div class="team-row">
-                    <span class="team-label team-opponent">⚔️ Opponents (Arslan + Zara)</span>
+                    <span class="team-label team-opponent">⚔️ Opponents (Hassan + Zara)</span>
                     <span class="team-score" id="team-opponent-score">0</span>
                 </div>
             </div>
@@ -786,29 +1010,41 @@
     </div>
 
     <script>
+        let gameDifficulty = 'medium';
+
+        function selectDifficulty(difficulty) {
+            gameDifficulty = difficulty;
+            document.querySelectorAll('.difficulty-btn').forEach(btn => {
+                btn.classList.remove('selected');
+                if (btn.dataset.difficulty === difficulty) {
+                    btn.classList.add('selected');
+                }
+            });
+            document.getElementById('difficulty-badge').textContent = difficulty.charAt(0).toUpperCase() + difficulty.slice(1);
+            document.getElementById('difficulty-overlay').style.display = 'none';
+            document.getElementById('app-wrapper').style.display = 'flex';
+            startNewRound();
+        }
+
         (function() {
             const SUITS = ['♠', '♥', '♦', '♣'];
             const RANKS = ['A', 'K', 'Q', 'J', '10', '9', '8', '7', '6', '5', '4', '3', '2'];
             const RANK_VALUES = { A: 14, K: 13, Q: 12, J: 11, 10: 10, 9: 9, 8: 8, 7: 7, 6: 6, 5: 5, 4: 4, 3: 3, 2: 2 };
-            const PLAYER_NAMES = ['You', 'Usman', 'Arslan', 'Zara'];
+            const PLAYER_NAMES = ['You', 'Usman', 'Hassan', 'Zara'];
             const PLAYER_ICONS = ['🧑', '🤖', '🤖', '🤖'];
             const PARTNER_MAP = { 0: 1, 1: 0, 2: 3, 3: 2 };
 
-            // ANTICLOCKWISE ORDER: 0(You) -> 3(Zara) -> 1(Usman) -> 2(Arslan) -> 0
-            // Next player in anticlockwise direction
+            // ANTICLOCKWISE ORDER: 0(You) -> 3(Zara) -> 1(Usman) -> 2(Hassan) -> 0
             function getNextPlayer(playerIdx) {
-                // Order: 0 -> 3 -> 1 -> 2 -> 0
                 const order = [0, 3, 1, 2];
                 const currentIndex = order.indexOf(playerIdx);
                 return order[(currentIndex + 1) % 4];
             }
 
-            // Get the display order for the turn indicator
             function getTurnOrderDisplay() {
-                return ['You', 'Zara', 'Usman', 'Arslan'];
+                return ['You', 'Zara', 'Usman', 'Hassan'];
             }
 
-            // PHASE DISTRIBUTION: 5 + 2 + 2 + 2 + 2 = 13
             const PHASE_SIZES = [5, 2, 2, 2, 2];
 
             let state = {};
@@ -818,7 +1054,7 @@
             let trickWinner = -1;
             let phaseTricks = 0;
             let totalTricks = 0;
-            let currentPhase = 0; // 0-indexed
+            let currentPhase = 0;
             let phaseStart = 0;
             let roundOver = false;
             let turnLock = false;
@@ -845,6 +1081,7 @@
             const teamOpponentScore = document.getElementById('team-opponent-score');
             const currentTurnDisplay = document.getElementById('current-turn-display');
             const turnOrderDisplay = document.getElementById('turn-order-display');
+            const difficultyBadge = document.getElementById('difficulty-badge');
             const badges = [
                 document.getElementById('badge-0'),
                 document.getElementById('badge-1'),
@@ -962,10 +1199,11 @@
                     if (i < order.length - 1) html += ' → ';
                 }
                 html += ' → You';
+                html += ` <span class="difficulty-badge">${gameDifficulty.charAt(0).toUpperCase() + gameDifficulty.slice(1)}</span>`;
                 turnOrderDisplay.innerHTML = html;
             }
 
-            // ------- ADVANCED AI ----------
+            // ------- AI WITH DIFFICULTY LEVELS ----------
             function aiChooseCard(playerIdx, hand) {
                 const valid = getValidMoves(playerIdx, hand);
                 if (valid.length === 0) return 0;
@@ -990,6 +1228,51 @@
                     }
                 }
 
+                // EASY MODE: Random play with basic rules
+                if (gameDifficulty === 'easy') {
+                    // Still follow suit rules, but random within valid moves
+                    return valid[Math.floor(Math.random() * valid.length)];
+                }
+
+                // MEDIUM MODE: Basic strategy
+                if (gameDifficulty === 'medium') {
+                    // Try to win if possible, otherwise play low
+                    if (trickLeadSuit !== null && !isLead) {
+                        const hasSuit = hand.some(c => c.suit === leadSuit);
+                        if (hasSuit) {
+                            // Try to win with highest card of lead suit
+                            let best = -1, bestVal = -1;
+                            for (let idx of valid) {
+                                if (hand[idx].suit === leadSuit && hand[idx].value > bestVal) {
+                                    bestVal = hand[idx].value;
+                                    best = idx;
+                                }
+                            }
+                            if (best !== -1 && trickCards.length > 0) {
+                                const currentBest = trickCards.reduce((a, b) => 
+                                    compareCards(a.card, b.card, leadSuit) > 0 ? a : b
+                                ).card;
+                                if (hand[best].suit === leadSuit && hand[best].value > currentBest.value) {
+                                    return best;
+                                }
+                            }
+                            // Otherwise play lowest
+                            const suitCards = hand.filter(c => c.suit === leadSuit);
+                            let lowIdx = hand.indexOf(suitCards.reduce((a, b) => a.value < b.value ? a : b));
+                            if (valid.includes(lowIdx)) return lowIdx;
+                        }
+                    }
+                    // Play highest card if leading
+                    if (isLead || trickLeadSuit === null) {
+                        let maxIdx = 0;
+                        for (let i = 1; i < hand.length; i++)
+                            if (hand[i].value > hand[maxIdx].value) maxIdx = i;
+                        if (valid.includes(maxIdx)) return maxIdx;
+                    }
+                    return valid[0];
+                }
+
+                // HARD MODE: Advanced strategy with all 4 rules
                 // Rule 1: Strong in Rung - don't play Rung
                 if (hasAceOfTrump && trumpCount >= 4) {
                     const nonTrumpCards = hand.filter(c => c.suit !== trump);
@@ -1005,7 +1288,7 @@
                     }
                 }
 
-                // Rule 2: Weak in Rung (1-3 cards) - signal partner
+                // Rule 2: Weak in Rung - signal partner
                 if (trumpCount >= 1 && trumpCount <= 3 && isLead) {
                     const trumpCards = hand.filter(c => c.suit === trump);
                     if (trumpCards.length > 0) {
@@ -1386,7 +1669,7 @@
                 isAnimating = false;
                 const partnerTotal = trickCounts[0] + trickCounts[1];
                 const opponentTotal = trickCounts[2] + trickCounts[3];
-                const winner = partnerTotal > opponentTotal ? 'Your Team (You + Usman)' : 'Opponents (Arslan + Zara)';
+                const winner = partnerTotal > opponentTotal ? 'Your Team (You + Usman)' : 'Opponents (Hassan + Zara)';
                 messageEl.innerHTML = `🏁 <span class="step-highlight">ROUND OVER!</span> ${winner} wins! (${partnerTotal} vs ${opponentTotal})`;
                 addStep(`🏁 Round over! ${winner} wins! (${partnerTotal} vs ${opponentTotal})`, true);
                 turnIndicator.textContent = 'ROUND END';
@@ -1418,7 +1701,7 @@
                             <span>${partnerTotal}</span>
                         </div>
                         <div class="result-row">
-                            <span>⚔️ Opponents (Arslan + Zara) ${opponentTotal > partnerTotal ? '👑' : ''}</span>
+                            <span>⚔️ Opponents (Hassan + Zara) ${opponentTotal > partnerTotal ? '👑' : ''}</span>
                             <span>${opponentTotal}</span>
                         </div>
                         <div class="result-row" style="border-top:2px solid #3a5a3a; margin-top:8px; padding-top:8px; font-weight:700;">
@@ -1518,7 +1801,7 @@
                     players: [
                         { name: 'You', hand: [] },
                         { name: 'Usman', hand: [] },
-                        { name: 'Arslan', hand: [] },
+                        { name: 'Hassan', hand: [] },
                         { name: 'Zara', hand: [] }
                     ],
                     deck: deck,
@@ -1546,9 +1829,10 @@
                 stepLog.innerHTML = '';
                 stepCounter = 0;
                 addStep('🔄 New round starting...', true);
+                addStep(`🎯 Difficulty: ${gameDifficulty.charAt(0).toUpperCase() + gameDifficulty.slice(1)}`, true);
                 addStep('🤝 Your partner is Usman (C1 - opposite you)', true);
-                addStep('⚔️ Opponents: Arslan (C2) and Zara (C3)', true);
-                addStep('🔄 Turn order (anticlockwise): You → Zara → Usman → Arslan', true);
+                addStep('⚔️ Opponents: Hassan (C2) and Zara (C3)', true);
+                addStep('🔄 Turn order (anticlockwise): You → Zara → Usman → Hassan', true);
                 addStep('📊 Phase distribution: 5 + 2 + 2 + 2 + 2 = 13 tricks', true);
 
                 turnLock = true;
@@ -1561,7 +1845,7 @@
                     addStep('🎯 Dealing one card to each player...');
                     renderAll();
 
-                    const cardOrder = [0, 3, 1, 2]; // Anticlockwise: You -> Zara -> Usman -> Arslan
+                    const cardOrder = [0, 3, 1, 2];
                     const oneCardEach = [];
                     for (let i = 0; i < 4; i++) {
                         const card = deck.pop();
@@ -1618,7 +1902,28 @@
                 }, 1200);
             }
 
-            startNewRound();
+            // Global function for difficulty selection
+            window.selectDifficulty = function(difficulty) {
+                gameDifficulty = difficulty;
+                document.querySelectorAll('.difficulty-btn').forEach(btn => {
+                    btn.classList.remove('selected');
+                    if (btn.dataset.difficulty === difficulty) {
+                        btn.classList.add('selected');
+                    }
+                });
+                document.getElementById('difficulty-badge').textContent = difficulty.charAt(0).toUpperCase() + difficulty.slice(1);
+                document.getElementById('difficulty-overlay').style.display = 'none';
+                document.getElementById('app-wrapper').style.display = 'flex';
+                startNewRound();
+            };
+
+            // Initialize with medium difficulty
+            document.addEventListener('DOMContentLoaded', function() {
+                // Show overlay, wait for user selection
+                document.getElementById('difficulty-overlay').style.display = 'flex';
+                document.getElementById('app-wrapper').style.display = 'none';
+            });
+
         })();
     </script>
 </body>
