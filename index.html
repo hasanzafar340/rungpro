@@ -24,7 +24,6 @@
             perspective: 1200px;
         }
 
-        /* Difficulty Selection Overlay */
         #difficulty-overlay {
             position: fixed;
             inset: 0;
@@ -254,6 +253,27 @@
         .team-partner { color: #7ddf7d; }
         .team-opponent { color: #ff7d7d; }
 
+        #bid-display {
+            background: #2a1a0a;
+            padding: 4px 16px;
+            border-radius: 30px;
+            font-size: 0.85rem;
+            color: #f7e9b0;
+            border: 1px solid #b8a27b40;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        #bid-display .bid-value {
+            font-weight: 700;
+            color: #f5e9b0;
+            font-size: 1rem;
+        }
+        #bid-display .bid-min {
+            font-size: 0.65rem;
+            opacity: 0.7;
+        }
+
         #step-log {
             flex: 1;
             overflow-y: auto;
@@ -438,7 +458,6 @@
             align-items: center;
         }
 
-        /* 3D Card Styles */
         .card {
             width: 62px;
             height: 88px;
@@ -473,18 +492,6 @@
             background: linear-gradient(135deg, rgba(255,255,255,0.3) 0%, transparent 50%, rgba(0,0,0,0.05) 100%);
             pointer-events: none;
             z-index: 2;
-        }
-
-        .card .card-face {
-            position: relative;
-            width: 100%;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            border-radius: 10px;
-            background: #fcf9f2;
         }
 
         .card[data-suit="♥"],
@@ -526,7 +533,6 @@
             transform: rotate(180deg);
         }
 
-        /* 3D Card Back */
         .card-back {
             background: #1f3f6b;
             background-image:
@@ -921,7 +927,6 @@
     </style>
 </head>
 <body>
-    <!-- Difficulty Selection Overlay -->
     <div id="difficulty-overlay">
         <div id="difficulty-box">
             <h1>♠ RUNG ♠</h1>
@@ -952,17 +957,19 @@
                         <span class="rung-suit">♠</span> RUNG
                         <span class="declarer">by You</span>
                     </div>
+                    <div id="bid-display">
+                        🎯 Bid: <span class="bid-value" id="bid-value">5</span>
+                        <span class="bid-min">(Min: <span id="min-bid-value">5</span>)</span>
+                    </div>
                     <div id="phase-info">Phase 1 · Trick 0/13</div>
                     <div id="turn-indicator">⏳ waiting</div>
                 </div>
 
-                <!-- Usman (C1) - TOP - Player 1 -->
                 <div class="player-zone" id="zone-top">
                     <div class="player-label partner" id="label-1">🤖 Usman (C1) <span class="partner-badge">🤝 Partner</span> <span class="trick-count-badge" id="badge-1">0</span></div>
                     <div class="cards-container" id="computer1-cards"></div>
                 </div>
 
-                <!-- Middle: Hassan (C2) - LEFT - Player 2 & Zara (C3) - RIGHT - Player 3 -->
                 <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; flex-wrap:wrap;">
                     <div class="player-zone" style="flex:1; min-width:70px;">
                         <div class="player-label opponent" id="label-2">🤖 Hassan (C2) <span class="opponent-badge">⚔️</span> <span class="trick-count-badge" id="badge-2">0</span></div>
@@ -980,7 +987,6 @@
                     </div>
                 </div>
 
-                <!-- You (Human) - BOTTOM - Player 0 -->
                 <div class="player-zone human" id="zone-human">
                     <div class="player-label partner" id="label-0">🧑 You <span class="partner-badge">🤝 Partner: Usman</span> <span class="trick-count-badge" id="badge-0">0</span></div>
                     <div class="cards-container" id="human-cards"></div>
@@ -992,7 +998,6 @@
             </div>
         </div>
 
-        <!-- Side Panel -->
         <div id="side-panel">
             <h3>📋 GAME LOG</h3>
             <div id="team-scores">
@@ -1034,7 +1039,12 @@
             const PLAYER_ICONS = ['🧑', '🤖', '🤖', '🤖'];
             const PARTNER_MAP = { 0: 1, 1: 0, 2: 3, 3: 2 };
 
-            // ANTICLOCKWISE ORDER: 0(You) -> 3(Zara) -> 1(Usman) -> 2(Hassan) -> 0
+            let lastRungDeclarer = -1;
+            let isShutout = false;
+            let roundWinner = -1;
+            let currentBid = 5;
+            let minimumBid = 5;
+
             function getNextPlayer(playerIdx) {
                 const order = [0, 3, 1, 2];
                 const currentIndex = order.indexOf(playerIdx);
@@ -1082,6 +1092,8 @@
             const currentTurnDisplay = document.getElementById('current-turn-display');
             const turnOrderDisplay = document.getElementById('turn-order-display');
             const difficultyBadge = document.getElementById('difficulty-badge');
+            const bidValueEl = document.getElementById('bid-value');
+            const minBidValueEl = document.getElementById('min-bid-value');
             const badges = [
                 document.getElementById('badge-0'),
                 document.getElementById('badge-1'),
@@ -1203,7 +1215,48 @@
                 turnOrderDisplay.innerHTML = html;
             }
 
-            // ------- AI WITH DIFFICULTY LEVELS ----------
+            function determineRoundWinner() {
+                const partnerTotal = trickCounts[0] + trickCounts[1];
+                const opponentTotal = trickCounts[2] + trickCounts[3];
+                
+                if (partnerTotal === 13 && opponentTotal === 0) {
+                    isShutout = true;
+                    roundWinner = 0;
+                    addStep(`🔥 SHUTOUT! Your Team took ALL 13 tricks!`, true);
+                    return;
+                } else if (opponentTotal === 13 && partnerTotal === 0) {
+                    isShutout = true;
+                    roundWinner = 1;
+                    addStep(`🔥 SHUTOUT! Opponents took ALL 13 tricks!`, true);
+                    return;
+                }
+                isShutout = false;
+                
+                if (partnerTotal >= 7 && partnerTotal >= currentBid) {
+                    roundWinner = 0;
+                    addStep(`🏆 Your Team reached ${partnerTotal} tricks (Bid: ${currentBid}) - WINNER!`, true);
+                } else if (opponentTotal >= 7 && opponentTotal >= currentBid) {
+                    roundWinner = 1;
+                    addStep(`🏆 Opponents reached ${opponentTotal} tricks (Bid: ${currentBid}) - WINNER!`, true);
+                } else {
+                    roundWinner = -1;
+                    addStep(`❌ No one reached 7 tricks or the bid of ${currentBid}`, true);
+                }
+            }
+
+            function getNextRungDeclarer() {
+                if (lastRungDeclarer === -1) {
+                    return Math.floor(Math.random() * 4);
+                }
+                let nextDeclarer = lastRungDeclarer;
+                if (isShutout) {
+                    nextDeclarer = PARTNER_MAP[lastRungDeclarer];
+                    addStep(`🔄 SHUTOUT! Partner (${PLAYER_NAMES[nextDeclarer]}) will declare Rung next`, true);
+                    isShutout = false;
+                }
+                return nextDeclarer;
+            }
+
             function aiChooseCard(playerIdx, hand) {
                 const valid = getValidMoves(playerIdx, hand);
                 if (valid.length === 0) return 0;
@@ -1228,19 +1281,14 @@
                     }
                 }
 
-                // EASY MODE: Random play with basic rules
                 if (gameDifficulty === 'easy') {
-                    // Still follow suit rules, but random within valid moves
                     return valid[Math.floor(Math.random() * valid.length)];
                 }
 
-                // MEDIUM MODE: Basic strategy
                 if (gameDifficulty === 'medium') {
-                    // Try to win if possible, otherwise play low
                     if (trickLeadSuit !== null && !isLead) {
                         const hasSuit = hand.some(c => c.suit === leadSuit);
                         if (hasSuit) {
-                            // Try to win with highest card of lead suit
                             let best = -1, bestVal = -1;
                             for (let idx of valid) {
                                 if (hand[idx].suit === leadSuit && hand[idx].value > bestVal) {
@@ -1256,13 +1304,11 @@
                                     return best;
                                 }
                             }
-                            // Otherwise play lowest
                             const suitCards = hand.filter(c => c.suit === leadSuit);
                             let lowIdx = hand.indexOf(suitCards.reduce((a, b) => a.value < b.value ? a : b));
                             if (valid.includes(lowIdx)) return lowIdx;
                         }
                     }
-                    // Play highest card if leading
                     if (isLead || trickLeadSuit === null) {
                         let maxIdx = 0;
                         for (let i = 1; i < hand.length; i++)
@@ -1272,8 +1318,6 @@
                     return valid[0];
                 }
 
-                // HARD MODE: Advanced strategy with all 4 rules
-                // Rule 1: Strong in Rung - don't play Rung
                 if (hasAceOfTrump && trumpCount >= 4) {
                     const nonTrumpCards = hand.filter(c => c.suit !== trump);
                     if (nonTrumpCards.length > 0) {
@@ -1288,7 +1332,6 @@
                     }
                 }
 
-                // Rule 2: Weak in Rung - signal partner
                 if (trumpCount >= 1 && trumpCount <= 3 && isLead) {
                     const trumpCards = hand.filter(c => c.suit === trump);
                     if (trumpCards.length > 0) {
@@ -1301,7 +1344,6 @@
                     }
                 }
 
-                // Rule 3: Partner signaled weakness - play strong
                 let partnerSignaledWeak = false;
                 if (partnerCard && partnerCard.card.suit === trump && partnerCard.card.value <= 10) {
                     partnerSignaledWeak = true;
@@ -1319,7 +1361,6 @@
                     }
                 }
 
-                // Rule 4: Don't try to win first 2-3 tricks
                 if (currentTrickNumber <= 3) {
                     if (trickLeadSuit !== null) {
                         const hasLeadSuit = hand.some(c => c.suit === leadSuit);
@@ -1339,7 +1380,6 @@
                     }
                 }
 
-                // Standard play for later tricks
                 if (isLead || trickLeadSuit === null) {
                     const highCards = hand.filter(c => c.value >= 12);
                     if (highCards.length > 0 && currentTrickNumber > 3) {
@@ -1395,7 +1435,6 @@
                 return lowIdx;
             }
 
-            // ------- Rung Declaration ----------
             function showRungSelection() {
                 waitingForRungDeclaration = true;
                 rungInstruction.style.display = 'block';
@@ -1433,8 +1472,9 @@
                 });
 
                 renderAll();
+                // Continue with dealing remaining cards
                 setTimeout(() => {
-                    messageEl.innerHTML = '📤 <span class="step-highlight">STEP 5:</span> Dealing 4 more cards...';
+                    messageEl.innerHTML = '📤 <span class="step-highlight">STEP 4:</span> Dealing 4 more cards to each player...';
                     addStep('📤 Dealing 4 more cards to each player...');
                     renderAll();
                     for (let i = 0; i < 4; i++) {
@@ -1444,7 +1484,7 @@
                     }
                     renderAll();
                     setTimeout(() => {
-                        messageEl.innerHTML = '📤 <span class="step-highlight">STEP 6:</span> Dealing final 4 cards...';
+                        messageEl.innerHTML = '📤 <span class="step-highlight">STEP 5:</span> Dealing final 4 cards to each player...';
                         addStep('📤 Dealing final 4 cards to each player...');
                         renderAll();
                         for (let i = 0; i < 4; i++) {
@@ -1456,7 +1496,7 @@
                         gamePhase = 'play';
                         state.currentPlayer = rungDeclarer;
                         trickLeadPlayer = rungDeclarer;
-                        messageEl.innerHTML = `🎯 <span class="step-highlight">READY!</span> ${PLAYER_NAMES[rungDeclarer]} leads!`;
+                        messageEl.innerHTML = `🎯 <span class="step-highlight">READY!</span> ${PLAYER_NAMES[rungDeclarer]} leads the first trick!`;
                         addStep(`🎯 ${PLAYER_NAMES[rungDeclarer]} leads the first trick!`, true);
                         turnLock = false;
                         dealingComplete = true;
@@ -1498,7 +1538,7 @@
                 renderAll();
 
                 setTimeout(() => {
-                    messageEl.innerHTML = '📤 <span class="step-highlight">STEP 5:</span> Dealing 4 more cards...';
+                    messageEl.innerHTML = '📤 <span class="step-highlight">STEP 4:</span> Dealing 4 more cards to each player...';
                     addStep('📤 Dealing 4 more cards to each player...');
                     renderAll();
                     for (let i = 0; i < 4; i++) {
@@ -1508,7 +1548,7 @@
                     }
                     renderAll();
                     setTimeout(() => {
-                        messageEl.innerHTML = '📤 <span class="step-highlight">STEP 6:</span> Dealing final 4 cards...';
+                        messageEl.innerHTML = '📤 <span class="step-highlight">STEP 5:</span> Dealing final 4 cards to each player...';
                         addStep('📤 Dealing final 4 cards to each player...');
                         renderAll();
                         for (let i = 0; i < 4; i++) {
@@ -1520,7 +1560,7 @@
                         gamePhase = 'play';
                         state.currentPlayer = rungDeclarer;
                         trickLeadPlayer = rungDeclarer;
-                        messageEl.innerHTML = `🎯 <span class="step-highlight">READY!</span> ${PLAYER_NAMES[rungDeclarer]} leads!`;
+                        messageEl.innerHTML = `🎯 <span class="step-highlight">READY!</span> ${PLAYER_NAMES[rungDeclarer]} leads the first trick!`;
                         addStep(`🎯 ${PLAYER_NAMES[rungDeclarer]} leads the first trick!`, true);
                         turnLock = false;
                         dealingComplete = true;
@@ -1667,27 +1707,58 @@
             function endRound() {
                 roundOver = true;
                 isAnimating = false;
+                
+                lastRungDeclarer = rungDeclarer;
+                determineRoundWinner();
+                
                 const partnerTotal = trickCounts[0] + trickCounts[1];
                 const opponentTotal = trickCounts[2] + trickCounts[3];
-                const winner = partnerTotal > opponentTotal ? 'Your Team (You + Usman)' : 'Opponents (Hassan + Zara)';
-                messageEl.innerHTML = `🏁 <span class="step-highlight">ROUND OVER!</span> ${winner} wins! (${partnerTotal} vs ${opponentTotal})`;
-                addStep(`🏁 Round over! ${winner} wins! (${partnerTotal} vs ${opponentTotal})`, true);
+                
+                let resultMessage = '';
+                if (roundWinner === 0) {
+                    resultMessage = `🏆 <span class="step-highlight">YOU WIN!</span> Your Team got ${partnerTotal} tricks (Bid: ${currentBid})`;
+                    if (isShutout) {
+                        resultMessage = `🔥 <span class="step-highlight">SHUTOUT!</span> Your Team took ALL 13 tricks!`;
+                    }
+                } else if (roundWinner === 1) {
+                    resultMessage = `🏆 <span class="step-highlight">OPPONENTS WIN!</span> They got ${opponentTotal} tricks (Bid: ${currentBid})`;
+                    if (isShutout) {
+                        resultMessage = `🔥 <span class="step-highlight">SHUTOUT!</span> Opponents took ALL 13 tricks!`;
+                    }
+                } else {
+                    resultMessage = `❌ <span class="step-highlight">NO WINNER!</span> No one reached 7 tricks or bid of ${currentBid} (You: ${partnerTotal}, Opp: ${opponentTotal})`;
+                }
+                
+                messageEl.innerHTML = `🏁 <span class="step-highlight">ROUND OVER!</span> ${resultMessage}`;
+                addStep(`🏁 Round over! ${resultMessage}`, true);
                 turnIndicator.textContent = 'ROUND END';
+                
                 actionBtn.style.display = 'inline-block';
                 actionBtn.textContent = '🔄 New Round';
-                actionBtn.onclick = () => { actionBtn.style.display = 'none';
-                    startNewRound(); };
+                actionBtn.onclick = () => { 
+                    actionBtn.style.display = 'none';
+                    if (roundWinner !== -1) {
+                        minimumBid = Math.min(currentBid + 1, 13);
+                        addStep(`📊 New minimum bid: ${minimumBid}`, true);
+                    }
+                    startNewRound(); 
+                };
                 renderAll();
                 showResult();
             }
 
             function showResult() {
-                const overlay = document.createElement('div');
-                overlay.className = 'result-overlay';
-                overlay.id = 'result-overlay';
+                const overlay = document.getElementById('result-overlay');
+                if (overlay) overlay.remove();
+                
+                const newOverlay = document.createElement('div');
+                newOverlay.className = 'result-overlay';
+                newOverlay.id = 'result-overlay';
                 const partnerTotal = trickCounts[0] + trickCounts[1];
                 const opponentTotal = trickCounts[2] + trickCounts[3];
-                const winner = partnerTotal > opponentTotal ? 'Your Team' : 'Opponents';
+                let winner = 'No Winner';
+                if (roundWinner === 0) winner = 'Your Team 🏆';
+                else if (roundWinner === 1) winner = 'Opponents 🏆';
 
                 let html = `
                     <div class="result-box">
@@ -1697,16 +1768,20 @@
                             <span>Tricks</span>
                         </div>
                         <div class="result-row">
-                            <span>🤝 Your Team (You + Usman) ${partnerTotal > opponentTotal ? '👑' : ''}</span>
+                            <span>🤝 Your Team (You + Usman) ${roundWinner === 0 ? '👑' : ''} ${isShutout ? '🔥 SHUTOUT!' : ''}</span>
                             <span>${partnerTotal}</span>
                         </div>
                         <div class="result-row">
-                            <span>⚔️ Opponents (Hassan + Zara) ${opponentTotal > partnerTotal ? '👑' : ''}</span>
+                            <span>⚔️ Opponents (Hassan + Zara) ${roundWinner === 1 ? '👑' : ''} ${isShutout ? '🔥 SHUTOUT!' : ''}</span>
                             <span>${opponentTotal}</span>
                         </div>
                         <div class="result-row" style="border-top:2px solid #3a5a3a; margin-top:8px; padding-top:8px; font-weight:700;">
                             <span>🏆 Winner</span>
-                            <span>${winner}!</span>
+                            <span>${winner}</span>
+                        </div>
+                        <div class="result-row" style="font-size:0.85rem; color:#b8a27b;">
+                            <span>🎯 Bid</span>
+                            <span>${currentBid}</span>
                         </div>
                         <div style="margin-top:12px; border-top:1px solid #3a5a3a; padding-top:12px;">
                             <div style="font-size:0.8rem; color:#b8a27b; text-align:center;">Individual Scores</div>
@@ -1725,8 +1800,8 @@
                         <button class="result-close-btn" onclick="document.getElementById('result-overlay').remove()">Close</button>
                     </div>
                 `;
-                overlay.innerHTML = html;
-                document.body.appendChild(overlay);
+                newOverlay.innerHTML = html;
+                document.body.appendChild(newOverlay);
             }
 
             function renderAll() {
@@ -1793,10 +1868,17 @@
                 if (roundOver) phaseInfo.textContent = `🏁 Round over · ${totalTricks}/13`;
                 updateBadges();
                 updateTurnDisplay();
+                
+                bidValueEl.textContent = currentBid;
+                minBidValueEl.textContent = minimumBid;
             }
 
             function startNewRound() {
                 const deck = shuffle(createDeck());
+                
+                // Rule 3 & 5: Determine who declares Rung
+                rungDeclarer = getNextRungDeclarer();
+                
                 state = {
                     players: [
                         { name: 'You', hand: [] },
@@ -1824,16 +1906,32 @@
                 dealingComplete = false;
                 rungInstruction.style.display = 'none';
                 actionBtn.style.display = 'none';
+                
+                if (currentBid < 5) {
+                    currentBid = 5;
+                }
+                if (minimumBid < 5) {
+                    minimumBid = 5;
+                }
+                if (currentBid < minimumBid) {
+                    currentBid = minimumBid;
+                }
+                bidValueEl.textContent = currentBid;
+                minBidValueEl.textContent = minimumBid;
+                
                 updateBadges();
 
                 stepLog.innerHTML = '';
                 stepCounter = 0;
                 addStep('🔄 New round starting...', true);
                 addStep(`🎯 Difficulty: ${gameDifficulty.charAt(0).toUpperCase() + gameDifficulty.slice(1)}`, true);
+                addStep(`📊 Bid: ${currentBid} (Min: ${minimumBid})`, true);
+                addStep(`👑 ${PLAYER_NAMES[rungDeclarer]} will declare Rung`, true);
                 addStep('🤝 Your partner is Usman (C1 - opposite you)', true);
                 addStep('⚔️ Opponents: Hassan (C2) and Zara (C3)', true);
                 addStep('🔄 Turn order (anticlockwise): You → Zara → Usman → Hassan', true);
                 addStep('📊 Phase distribution: 5 + 2 + 2 + 2 + 2 = 13 tricks', true);
+                addStep('🏆 Win condition: 7+ tricks AND meet bid', true);
 
                 turnLock = true;
                 messageEl.innerHTML = '🃏 <span class="step-highlight">STEP 1:</span> Shuffling deck...';
@@ -1841,68 +1939,32 @@
                 renderAll();
 
                 setTimeout(() => {
-                    messageEl.innerHTML = '🎯 <span class="step-highlight">STEP 2:</span> Giving one card to each player...';
-                    addStep('🎯 Dealing one card to each player...');
+                    // Skip the card selection step - we already know who declares
+                    // Just deal 5 cards
+                    messageEl.innerHTML = '📤 <span class="step-highlight">STEP 2:</span> Dealing 5 cards to each player...';
+                    addStep('📤 Dealing 5 cards to each player...');
                     renderAll();
 
-                    const cardOrder = [0, 3, 1, 2];
-                    const oneCardEach = [];
-                    for (let i = 0; i < 4; i++) {
-                        const card = deck.pop();
-                        oneCardEach.push(card);
+                    for (let i = 0; i < 5; i++) {
+                        for (let p = 0; p < 4; p++) {
+                            state.players[p].hand.push(deck.pop());
+                        }
                     }
 
-                    let cardDisplay = '';
-                    for (let i = 0; i < 4; i++) {
-                        const name = PLAYER_NAMES[cardOrder[i]];
-                        const card = oneCardEach[i];
-                        cardDisplay += `${name}: ${card.rank}${card.suit} (${card.value})<br>`;
-                        addStep(`📄 ${name} drew ${card.rank}${card.suit} (value: ${card.value})`);
-                    }
-                    messageEl.innerHTML = `🎯 <span class="step-highlight">STEP 2:</span> Cards drawn:<br>${cardDisplay}`;
+                    state.players[0].hand = sortCardsBySuit(state.players[0].hand);
                     renderAll();
 
                     setTimeout(() => {
-                        let lowestIdx = 0;
-                        for (let i = 1; i < 4; i++) {
-                            if (oneCardEach[i].value < oneCardEach[lowestIdx].value) lowestIdx = i;
+                        // Now declare Rung
+                        if (rungDeclarer === 0) {
+                            showRungSelection();
+                        } else {
+                            aiDeclareRung();
                         }
-                        rungDeclarer = cardOrder[lowestIdx];
-
-                        deck.push(...oneCardEach);
-                        shuffle(deck);
-
-                        messageEl.innerHTML = `🎯 <span class="step-highlight">STEP 2:</span> ${PLAYER_NAMES[rungDeclarer]} got the lowest card and will declare Rung!`;
-                        addStep(`👑 ${PLAYER_NAMES[rungDeclarer]} gets lowest card - will declare Rung!`, true);
-                        renderAll();
-
-                        setTimeout(() => {
-                            messageEl.innerHTML = '📤 <span class="step-highlight">STEP 3:</span> Dealing 5 cards to each player...';
-                            addStep('📤 Dealing 5 cards to each player...');
-                            renderAll();
-
-                            for (let i = 0; i < 5; i++) {
-                                for (let p = 0; p < 4; p++) {
-                                    state.players[p].hand.push(deck.pop());
-                                }
-                            }
-
-                            state.players[0].hand = sortCardsBySuit(state.players[0].hand);
-                            renderAll();
-
-                            setTimeout(() => {
-                                if (rungDeclarer === 0) {
-                                    showRungSelection();
-                                } else {
-                                    aiDeclareRung();
-                                }
-                            }, 1200);
-                        }, 1500);
-                    }, 1800);
+                    }, 1200);
                 }, 1200);
             }
 
-            // Global function for difficulty selection
             window.selectDifficulty = function(difficulty) {
                 gameDifficulty = difficulty;
                 document.querySelectorAll('.difficulty-btn').forEach(btn => {
@@ -1917,9 +1979,7 @@
                 startNewRound();
             };
 
-            // Initialize with medium difficulty
             document.addEventListener('DOMContentLoaded', function() {
-                // Show overlay, wait for user selection
                 document.getElementById('difficulty-overlay').style.display = 'flex';
                 document.getElementById('app-wrapper').style.display = 'none';
             });
