@@ -915,6 +915,31 @@
             border: 1px solid #f5e9b040;
         }
 
+        /* Senior / Doubling status indicator */
+        .senior-status {
+            font-size: 0.65rem;
+            padding: 3px 10px;
+            border-radius: 20px;
+            margin-top: 3px;
+            text-align: center;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            border: 1px solid #b8a27b40;
+            background: #0a1a0a80;
+            color: #b8a27b;
+            transition: all 0.3s ease;
+        }
+
+        .senior-status.partner-status {
+            border-color: #7ddf7d60;
+            color: #7ddf7d;
+        }
+
+        .senior-status.opponent-status {
+            border-color: #ff7d7d60;
+            color: #ff7d7d;
+        }
+
         #trick-piles {
             display: flex;
             justify-content: space-between;
@@ -1005,7 +1030,6 @@
             margin-top: 2px;
         }
 
-        /* ===== COURT / SHIT COURT BANNER ===== */
         .court-banner {
             position: fixed;
             top: 50%;
@@ -1033,6 +1057,13 @@
             border-color: #ff7d7d;
             color: #ff7d7d;
             box-shadow: 0 20px 80px rgba(0, 0, 0, 0.95), 0 0 80px rgba(255, 125, 125, 0.6);
+        }
+
+        .court-banner.early-end {
+            background: linear-gradient(135deg, #0a2a4a, #0a1a2a);
+            border-color: #7db8ff;
+            color: #7db8ff;
+            box-shadow: 0 20px 80px rgba(0, 0, 0, 0.95), 0 0 80px rgba(125, 184, 255, 0.6);
         }
 
         .court-banner .court-sub {
@@ -1231,6 +1262,7 @@
                 <div class="player-zone" id="zone-top">
                     <div class="player-label partner" id="label-1">🤖 Usman (C1) <span class="partner-badge">🤝
                             Partner</span> <span class="trick-count-badge" id="badge-1">0</span></div>
+                    <div class="senior-status" id="status-1"></div>
                     <div class="cards-container" id="computer1-cards"></div>
                 </div>
 
@@ -1239,6 +1271,7 @@
                         <div class="player-label opponent" id="label-2">🤖 Hassan (C2) <span
                                 class="opponent-badge">⚔️</span> <span class="trick-count-badge" id="badge-2">0</span>
                         </div>
+                        <div class="senior-status" id="status-2"></div>
                         <div class="cards-container" id="computer2-cards"></div>
                     </div>
                     <div id="center-area" style="flex:2; min-width:160px;">
@@ -1252,6 +1285,7 @@
                         <div class="player-label opponent" id="label-3">🤖 Zara (C3) <span
                                 class="opponent-badge">⚔️</span> <span class="trick-count-badge" id="badge-3">0</span>
                         </div>
+                        <div class="senior-status" id="status-3"></div>
                         <div class="cards-container" id="computer3-cards"></div>
                     </div>
                 </div>
@@ -1259,6 +1293,7 @@
                 <div class="player-zone human" id="zone-human">
                     <div class="player-label partner" id="label-0">🧑 You <span class="partner-badge">🤝 Partner:
                             Usman</span> <span class="trick-count-badge" id="badge-0">0</span></div>
+                    <div class="senior-status" id="status-0"></div>
                     <div class="cards-container" id="human-cards"></div>
                 </div>
 
@@ -1322,14 +1357,21 @@
             const PLAYER_ICONS = ['🧑', '🤖', '🤖', '🤖'];
             const PARTNER_MAP = { 0: 1, 1: 0, 2: 3, 3: 2 };
 
-            // ====== RULE STATE ======
             let lastRungDeclarer = -1;
-            let lastWinnerTeam = -1;       // 0 = Your Team, 1 = Opponents
+            let lastWinnerTeam = -1;
             let isShutout = false;
             let shutoutType = null;
             let roundWinner = -1;
             let currentBid = 5;
             let minimumBid = 5;
+            let earlyEnd = false; // NEW: 7-1 early end flag
+
+            // ===== SENIOR DOUBLING TRACKING =====
+            // Rules: If Seniors alternate every trick, no team can "run away".
+            // A team must win 2 tricks in a ROW to "double" and unlock.
+            let lastSeniorTeam = -1;      // 0 or 1 (team index)
+            let seniorStreak = 0;          // consecutive wins by same team
+            let doubledTeams = { 0: false, 1: false }; // has team "doubled" (2 in a row)?
 
             let partnerDiscards = { 0: [], 1: [], 2: [], 3: [] };
             let opponentDiscards = { 0: [], 1: [], 2: [], 3: [] };
@@ -1391,6 +1433,12 @@
                 document.getElementById('badge-1'),
                 document.getElementById('badge-2'),
                 document.getElementById('badge-3')
+            ];
+            const statusEls = [
+                document.getElementById('status-0'),
+                document.getElementById('status-1'),
+                document.getElementById('status-2'),
+                document.getElementById('status-3')
             ];
 
             function updateTeamScores() {
@@ -1509,6 +1557,27 @@
                 }
             }
 
+            // Update doubling status indicators
+            function updateSeniorStatus() {
+                for (let i = 0; i < 4; i++) {
+                    const el = statusEls[i];
+                    if (!el) continue;
+                    const team = (i === 0 || i === 1) ? 0 : 1;
+                    const isPartner = team === 0;
+                    el.className = 'senior-status ' + (isPartner ? 'partner-status' : 'opponent-status');
+
+                    if (doubledTeams[team]) {
+                        el.textContent = '🔓 UNLOCKED (doubled)';
+                    } else if (lastSeniorTeam === team && seniorStreak === 1) {
+                        el.textContent = '⚡ 1 more to double';
+                    } else if (lastSeniorTeam === team) {
+                        el.textContent = '👑 ' + seniorStreak + ' in a row';
+                    } else {
+                        el.textContent = '🔒 Needs to double';
+                    }
+                }
+            }
+
             function renderTrickPiles() {
                 partnerPileEl.innerHTML = '';
                 opponentPileEl.innerHTML = '';
@@ -1534,20 +1603,15 @@
                 opponentPileCountEl.textContent = trickPile.team1.length + ' tricks';
             }
 
-            // ============================================
-            // COURT / SHIT COURT BANNER (FIXED)
-            // ============================================
-            function showCourtBanner(text, subtitle, isShitCourt = false) {
-                // Remove any existing banner
+            function showCourtBanner(text, subtitle, type = 'court') {
                 const existing = document.querySelector('.court-banner');
                 if (existing) existing.remove();
 
                 const banner = document.createElement('div');
-                banner.className = 'court-banner' + (isShitCourt ? ' shit-court' : '');
+                banner.className = 'court-banner' + (type === 'shitcourt' ? ' shit-court' : type === 'earlyend' ? ' early-end' : '');
                 banner.innerHTML = `${text}<div class="court-sub">${subtitle}</div>`;
                 document.body.appendChild(banner);
 
-                // Auto-remove after 2.5s
                 setTimeout(() => {
                     if (banner.parentNode) {
                         banner.style.transition = 'opacity 0.6s ease-out, transform 0.6s ease-out';
@@ -1558,6 +1622,55 @@
                         }, 700);
                     }
                 }, 2500);
+            }
+
+            // ============================================
+            // RULE 1: Check for early end (7-1)
+            // ============================================
+            function checkEarlyEnd() {
+                const partnerTotal = teamTrickCounts[0];
+                const opponentTotal = teamTrickCounts[1];
+
+                // 7-1: One team has 7, the other has 0 or 1
+                if (partnerTotal === 7 && opponentTotal <= 1) {
+                    earlyEnd = true;
+                    roundWinner = 0;
+                    addStep(`⚡ EARLY END! Your Team reached 7 tricks while Opponents have only ${opponentTotal}!`, true);
+                    showCourtBanner('⚡ 7-' + opponentTotal + ' ⚡', 'Your Team wins early! (7-1 rule)', 'earlyend');
+                    return true;
+                }
+                if (opponentTotal === 7 && partnerTotal <= 1) {
+                    earlyEnd = true;
+                    roundWinner = 1;
+                    addStep(`⚡ EARLY END! Opponents reached 7 tricks while Your Team has only ${partnerTotal}!`, true);
+                    showCourtBanner('⚡ 7-' + partnerTotal + ' ⚡', 'Opponents win early! (7-1 rule)', 'earlyend');
+                    return true;
+                }
+                return false;
+            }
+
+            // ============================================
+            // RULE 2: Senior doubling logic
+            // Returns true if a team is allowed to "run away" (doubled)
+            // ============================================
+            function updateSeniorDoubling(winningTeam) {
+                if (lastSeniorTeam === winningTeam) {
+                    seniorStreak++;
+                } else {
+                    seniorStreak = 1;
+                    lastSeniorTeam = winningTeam;
+                }
+
+                // A team is doubled when they win 2 in a row
+                if (seniorStreak >= 2) {
+                    if (!doubledTeams[winningTeam]) {
+                        doubledTeams[winningTeam] = true;
+                        const teamName = winningTeam === 0 ? 'Your Team' : 'Opponents';
+                        addStep(`🔓 ${teamName} has DOUBLED! They can now run the table.`, true);
+                    }
+                }
+
+                updateSeniorStatus();
             }
 
             function determineRoundWinner() {
@@ -1571,7 +1684,7 @@
                     roundWinner = 0;
                     lastWinnerTeam = 0;
                     addStep(`🔥 COURT! Your Team took ALL 13 tricks!`, true);
-                    showCourtBanner('🔥 COURT! 🔥', 'Your Team took all 13 tricks — Partner will declare next', false);
+                    showCourtBanner('🔥 COURT! 🔥', 'Your Team took all 13 tricks — Partner will declare next', 'court');
                     return;
                 }
                 // SHIT COURT: 13-0 Opponents
@@ -1581,7 +1694,7 @@
                     roundWinner = 1;
                     lastWinnerTeam = 1;
                     addStep(`💀 SHIT COURT! Opponents took ALL 13 tricks!`, true);
-                    showCourtBanner('💀 SHIT COURT! 💀', 'Opponents took all 13 tricks — Rung goes to them', true);
+                    showCourtBanner('💀 SHIT COURT! 💀', 'Opponents took all 13 tricks — Rung goes to them', 'shitcourt');
                     return;
                 }
                 isShutout = false;
@@ -1603,74 +1716,63 @@
                 }
             }
 
-            // ============================================
-            // RUNG DECLARER LOGIC (UPDATED)
-            //
-            // 1) COURT (we got 13-0): Partner of last declarer declares
-            // 2) SHIT COURT (they got 13-0): Color moves to OPPONENT side
-            // 3) 7-6 or normal WIN: WINNING TEAM declares (or the same winner's side)
-            // ============================================
             function getNextRungDeclarer() {
-                // First round ever
                 if (lastRungDeclarer === -1) {
                     return Math.floor(Math.random() * 4);
                 }
 
-                // --- COURT: Our team got 13-0 → Partner of last declarer declares ---
                 if (isShutout && shutoutType === 'court') {
                     const nextDeclarer = PARTNER_MAP[lastRungDeclarer];
                     addStep(`🔥 COURT rule: Partner (${PLAYER_NAMES[nextDeclarer]}) of ${PLAYER_NAMES[lastRungDeclarer]} will declare Rung`, true);
                     return nextDeclarer;
                 }
 
-                // --- SHIT COURT: Opponents got 13-0 → Color moves to opponent side ---
                 if (isShutout && shutoutType === 'shitcourt') {
                     const lastDeclarerTeam = (lastRungDeclarer === 0 || lastRungDeclarer === 1) ? 'our' : 'opp';
                     let nextDeclarer;
                     if (lastDeclarerTeam === 'our') {
-                        // We declared, opponents Shit Court → Color moves to opponent side
-                        nextDeclarer = 2; // Hassan
+                        nextDeclarer = 2;
                         addStep(`💀 SHIT COURT: Color moves to Opponent side → ${PLAYER_NAMES[nextDeclarer]} will declare Rung`, true);
                     } else {
-                        // Opponent declared, opponent Shit Court → Their partner declares
                         nextDeclarer = PARTNER_MAP[lastRungDeclarer];
                         addStep(`💀 SHIT COURT: Partner (${PLAYER_NAMES[nextDeclarer]}) of ${PLAYER_NAMES[lastRungDeclarer]} will declare Rung`, true);
                     }
                     return nextDeclarer;
                 }
 
-                // --- 7-6 RULE: The WINNING TEAM declares ---
-                // The winning team keeps the Rung on their side.
-                // If the previous declarer was on the winning team, they declare again.
-                // If they were on the losing team, the winning team's lead player declares.
+                if (earlyEnd) {
+                    // Early end: winning team keeps Rung
+                    if (roundWinner === 0) {
+                        addStep(`⚡ 7-1 rule: Your Team won early → You will declare Rung`, true);
+                        return 0;
+                    } else {
+                        addStep(`⚡ 7-1 rule: Opponents won early → ${PLAYER_NAMES[2]} will declare Rung`, true);
+                        return 2;
+                    }
+                }
+
                 if (lastWinnerTeam === 0) {
-                    // Our Team won → If last declarer was ours, they declare again; else we take over
                     if (lastRungDeclarer === 0 || lastRungDeclarer === 1) {
                         addStep(`🏆 7-6 rule: Your Team won → ${PLAYER_NAMES[lastRungDeclarer]} declares Rung again`, true);
                         return lastRungDeclarer;
                     } else {
-                        // Opponents declared last but we won → we take Rung
                         addStep(`🏆 7-6 rule: Your Team won → You will declare Rung (Rung moves to Your Team)`, true);
                         return 0;
                     }
                 } else if (lastWinnerTeam === 1) {
-                    // Opponents won → If last declarer was theirs, they declare again; else they take over
                     if (lastRungDeclarer === 2 || lastRungDeclarer === 3) {
                         addStep(`🏆 7-6 rule: Opponents won → ${PLAYER_NAMES[lastRungDeclarer]} declares Rung again`, true);
                         return lastRungDeclarer;
                     } else {
-                        // We declared last but opponents won → they take Rung
                         addStep(`🏆 7-6 rule: Opponents won → ${PLAYER_NAMES[2]} will declare Rung (Rung moves to Opponents)`, true);
                         return 2;
                     }
                 }
 
-                // Fallback (no winner) → Same declarer repeats
                 addStep(`👑 Same declarer ${PLAYER_NAMES[lastRungDeclarer]} declares Rung again`, true);
                 return lastRungDeclarer;
             }
 
-            // ===== AI =====
             function aiChooseCard(playerIdx, hand) {
                 const valid = getValidMoves(playerIdx, hand);
                 if (valid.length === 0) return 0;
@@ -2010,6 +2112,7 @@
                 renderAll();
                 updateTurnDisplay();
                 updateSeniorHighlight();
+                updateSeniorStatus();
                 if (state.currentPlayer !== 0) {
                     turnIndicator.textContent = '🤖 thinking...';
                     setTimeout(() => aiTurn(), 800);
@@ -2029,6 +2132,9 @@
 
                 const winningTeam = (seniorPlayer === 0 || seniorPlayer === 1) ? 0 : 1;
                 teamTrickCounts[winningTeam]++;
+
+                // Update doubling logic
+                updateSeniorDoubling(winningTeam);
 
                 trickCards.forEach(t => {
                     suitExhaustion[t.card.suit] = (suitExhaustion[t.card.suit] || 0) + 1;
@@ -2059,6 +2165,15 @@
                     trickWinner = -1;
                     renderTrickPiles();
 
+                    // Check for EARLY END (7-1 rule)
+                    if (checkEarlyEnd()) {
+                        state.currentPlayer = seniorPlayer;
+                        trickLeadPlayer = seniorPlayer;
+                        isAnimating = false;
+                        endRound();
+                        return;
+                    }
+
                     if (totalTricks >= 13) {
                         state.currentPlayer = seniorPlayer;
                         trickLeadPlayer = seniorPlayer;
@@ -2075,6 +2190,7 @@
                     renderAll();
                     updateTurnDisplay();
                     updateSeniorHighlight();
+                    updateSeniorStatus();
 
                     if (state.currentPlayer !== 0) {
                         turnIndicator.textContent = '🤖 thinking...';
@@ -2149,7 +2265,6 @@
                 roundOver = true;
                 isAnimating = false;
 
-                // CRITICAL: Save the declarer BEFORE determineRoundWinner
                 lastRungDeclarer = rungDeclarer;
 
                 determineRoundWinner();
@@ -2158,7 +2273,9 @@
                 const opponentTotal = teamTrickCounts[1];
 
                 let resultMessage = '';
-                if (isShutout && shutoutType === 'court') {
+                if (earlyEnd) {
+                    resultMessage = `⚡ <span class="step-highlight">EARLY END (7-${roundWinner === 0 ? opponentTotal : partnerTotal})!</span> ${roundWinner === 0 ? 'Your Team' : 'Opponents'} wins early!`;
+                } else if (isShutout && shutoutType === 'court') {
                     resultMessage = `🔥 <span class="step-highlight">COURT!</span> Your Team took ALL 13 tricks! Partner will declare next Rung.`;
                 } else if (isShutout && shutoutType === 'shitcourt') {
                     resultMessage = `💀 <span class="step-highlight">SHIT COURT!</span> Opponents took ALL 13 tricks! Rung goes to opponent side.`;
@@ -2178,7 +2295,7 @@
                 actionBtn.textContent = '🔄 New Round';
                 actionBtn.onclick = () => {
                     actionBtn.style.display = 'none';
-                    if (roundWinner !== -1 && !isShutout) {
+                    if (roundWinner !== -1 && !isShutout && !earlyEnd) {
                         minimumBid = Math.min(currentBid + 1, 13);
                         addStep(`📊 New minimum bid: ${minimumBid}`, true);
                     }
@@ -2199,18 +2316,24 @@
                 const opponentTotal = teamTrickCounts[1];
                 let winner = 'No Winner';
                 let special = '';
-                if (isShutout && shutoutType === 'court') { winner = 'Your Team 🏆'; special = '🔥 COURT'; }
+                if (earlyEnd) {
+                    winner = roundWinner === 0 ? 'Your Team 🏆' : 'Opponents 🏆';
+                    special = `⚡ EARLY END 7-${roundWinner === 0 ? opponentTotal : partnerTotal}`;
+                }
+                else if (isShutout && shutoutType === 'court') { winner = 'Your Team 🏆'; special = '🔥 COURT'; }
                 else if (isShutout && shutoutType === 'shitcourt') { winner = 'Opponents 🏆'; special = '💀 SHIT COURT'; }
                 else if (roundWinner === 0) winner = 'Your Team 🏆';
                 else if (roundWinner === 1) winner = 'Opponents 🏆';
 
-                // Determine next declarer for display
                 const nextDeclarerIdx = (() => {
                     if (isShutout && shutoutType === 'court') return PARTNER_MAP[lastRungDeclarer];
                     if (isShutout && shutoutType === 'shitcourt') {
                         const lastTeam = (lastRungDeclarer === 0 || lastRungDeclarer === 1) ? 'our' : 'opp';
                         if (lastTeam === 'our') return 2;
                         return PARTNER_MAP[lastRungDeclarer];
+                    }
+                    if (earlyEnd) {
+                        return roundWinner === 0 ? 0 : 2;
                     }
                     if (lastWinnerTeam === 0) {
                         return (lastRungDeclarer === 0 || lastRungDeclarer === 1) ? lastRungDeclarer : 0;
@@ -2228,11 +2351,11 @@
                             <span>Tricks</span>
                         </div>
                         <div class="result-row">
-                            <span>🤝 Your Team (You + Usman) ${roundWinner === 0 ? '👑' : ''} ${(isShutout && shutoutType === 'court') ? '🔥 COURT' : ''}</span>
+                            <span>🤝 Your Team (You + Usman) ${roundWinner === 0 ? '👑' : ''}</span>
                             <span>${partnerTotal}</span>
                         </div>
                         <div class="result-row">
-                            <span>⚔️ Opponents (Hassan + Zara) ${roundWinner === 1 ? '👑' : ''} ${(isShutout && shutoutType === 'shitcourt') ? '💀 SHIT COURT' : ''}</span>
+                            <span>⚔️ Opponents (Hassan + Zara) ${roundWinner === 1 ? '👑' : ''}</span>
                             <span>${opponentTotal}</span>
                         </div>
                         <div class="result-row" style="border-top:2px solid #3a5a3a; margin-top:8px; padding-top:8px; font-weight:700;">
@@ -2248,7 +2371,8 @@
                             <span>${PLAYER_NAMES[nextDeclarerIdx]}</span>
                         </div>
                         <div style="margin-top:12px; border-top:1px solid #3a5a3a; padding-top:12px; text-align:center; color:#b8a27b; font-size:0.85rem;">
-                            👑 Last Senior: ${seniorPlayer >= 0 ? PLAYER_NAMES[seniorPlayer] : '—'}
+                            👑 Last Senior: ${seniorPlayer >= 0 ? PLAYER_NAMES[seniorPlayer] : '—'}<br>
+                            🔓 Doubling: Your Team ${doubledTeams[0] ? 'UNLOCKED' : 'locked'} · Opponents ${doubledTeams[1] ? 'UNLOCKED' : 'locked'}
                         </div>
                         <button class="result-close-btn" onclick="document.getElementById('result-overlay').remove()">Close</button>
                     </div>
@@ -2323,6 +2447,7 @@
                 updateBadges();
                 updateTurnDisplay();
                 updateSeniorHighlight();
+                updateSeniorStatus();
 
                 bidValueEl.textContent = currentBid;
                 minBidValueEl.textContent = minimumBid;
@@ -2359,6 +2484,11 @@
                 rungInstruction.style.display = 'none';
                 actionBtn.style.display = 'none';
 
+                // Reset doubling trackers
+                lastSeniorTeam = -1;
+                seniorStreak = 0;
+                doubledTeams = { 0: false, 1: false };
+
                 partnerDiscards = { 0: [], 1: [], 2: [], 3: [] };
                 opponentDiscards = { 0: [], 1: [], 2: [], 3: [] };
                 partnerSignaledWeak = false;
@@ -2375,8 +2505,10 @@
 
                 const previousShutout = isShutout;
                 const previousShutoutType = shutoutType;
+                const previousEarlyEnd = earlyEnd;
                 isShutout = false;
                 shutoutType = null;
+                earlyEnd = false;
 
                 updateBadges();
 
@@ -2385,17 +2517,18 @@
                 addStep('🔄 New round starting...', true);
                 addStep(`🎯 Difficulty: ${gameDifficulty.charAt(0).toUpperCase() + gameDifficulty.slice(1)}`, true);
                 addStep(`📊 Bid: ${currentBid} (Min: ${minimumBid})`, true);
+                addStep(`⚡ Rule: 7-1 early end is active`, true);
+                addStep(`🔒 Rule: Senior doubling active (need 2 in a row to unlock)`, true);
                 if (previousShutout && previousShutoutType === 'court') {
                     addStep(`🔥 COURT last round → Partner of ${PLAYER_NAMES[lastRungDeclarer]} declares`, true);
                 } else if (previousShutout && previousShutoutType === 'shitcourt') {
                     addStep(`💀 SHIT COURT last round → Color moves to Opponent side`, true);
+                } else if (previousEarlyEnd) {
+                    addStep(`⚡ EARLY END last round → Winning team keeps Rung`, true);
                 } else if (lastWinnerTeam !== -1) {
                     addStep(`🏆 7-6 rule → Winning team keeps Rung (${lastWinnerTeam === 0 ? 'Your Team' : 'Opponents'})`, true);
                 }
                 addStep(`👑 ${PLAYER_NAMES[rungDeclarer]} will declare Rung`, true);
-                addStep('🤝 Your partner is Usman (C1 - opposite you)', true);
-                addStep('⚔️ Opponents: Hassan (C2) and Zara (C3)', true);
-                addStep('🔄 Turn order (anticlockwise): You → Zara → Usman → Hassan', true);
 
                 turnLock = true;
                 messageEl.innerHTML = '🃏 <span class="step-highlight">STEP 1:</span> Shuffling deck...';
